@@ -1,0 +1,36 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.preprocessing import StandardScaler
+
+# 1. Load your dataset (features extracted from your run windows)
+# dataframe columns: [feature_1, feature_2, ..., label]
+df = pd.read_csv("run_training_data.csv")
+
+# Separate features (X) and the target label (y)
+X = df.drop(columns=["label", "run_id"])  # drop metadata and label
+y = df["label"]  # 0 for Good, 1 for Poor Form
+
+# 2. Split data into training (80%) and testing (20%) sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# 3. Scale features so sensors with large numbers don't overpower smaller ones
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 4. Train a Random Forest Classifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# 5. Evaluate the model on unseen test data
+y_pred = model.predict(X_test_scaled)
+
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
