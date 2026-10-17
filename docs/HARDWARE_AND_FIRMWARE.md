@@ -220,3 +220,20 @@ References: supplied Spectra Symbol flex sheet and Adafruit MPU6050/SHT40 guides
 [ESP32 I2C API](https://docs.espressif.com/projects/arduino-esp32/en/latest/api/i2c.html),
 [Arduino ADC API](https://docs.espressif.com/projects/arduino-esp32/en/latest/api/adc.html),
 [Espressif BLE notify example](https://github.com/espressif/arduino-esp32/blob/master/libraries/BLE/examples/Notify/Notify.ino).
+
+## Send dummy readings from the ESP32 over real Bluetooth
+
+`SEND_DUMMY_DATA` in esp32/config.h is currently **true** for connection testing.
+Upload the firmware with PlatformIO. No physical sensors need to be connected.
+The ESP32 advertises as PostureShirt with the same service and characteristic UUIDs.
+It sends one 20-byte notification every 20 ms, cycling through all nine sensors
+(each sensor updates about 5.6 times per second). Values change smoothly: elbow/spine
+resistance, acceleration/gyro axes, and temperature/humidity. Header flag bit 1
+marks these readings as simulated; flag bit 0 still means valid.
+
+In the installed Android development app, use **Find my shirt -> Connect**.
+Do **not** select Try demo: that generates readings on the phone and does not test
+Bluetooth. The updated app displays an ESP32 dummy-mode notice. Existing APKs can
+receive the updated JavaScript through Metro without a native rebuild. Serial
+Monitor at 115200 prints whether the ESP32 is connected and sending or waiting.
+Set SEND_DUMMY_DATA=false and upload again to restore real sensor acquisition.

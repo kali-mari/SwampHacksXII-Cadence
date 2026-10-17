@@ -45,3 +45,14 @@ test('accepts spine flex ID 2 and rejects out-of-range IDs for each type', () =>
     assert.throws(() => decodePacket(b));
   }
 });
+
+test('marks ESP32 dummy packets while preserving valid readings', () => {
+  const [b, v] = packet(1, 2);
+  b[3] = 3;
+  v.setUint32(12, 40000, true);
+  assert.equal(decodePacket(b).simulated, true);
+  assert.equal(decodePacket(b).valid, true);
+  assert.equal(decodePacket(b).resistanceOhms, 40000);
+  b[3] = 1;
+  assert.equal(decodePacket(b).simulated, false);
+});
