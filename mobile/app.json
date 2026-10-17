@@ -20,10 +20,17 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
+<<<<<<< HEAD
+          "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings.",
+          "neverForLocation": true
+        }
+      ]
+=======
           "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings."
         }
       ],
       "expo-status-bar"
+>>>>>>> 61ae9f7356df14e72802d5b25e3fc893321265f0
     ]
   }
 }
