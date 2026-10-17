@@ -84,7 +84,7 @@ function Dashboard() {
     await stop(); setMode('demo'); setStatus('Demo running');
   }
   async function scan() {
-    if (isExpoGo) { setError('Bluetooth needs a development build. Demo mode works in Expo Go. See mobile/README.md for the iPhone build steps.'); return; }
+    if (isExpoGo) { setError('Bluetooth needs a development build. Demo mode works in Expo Go. Install the Android EAS development APK, then open this project in Posture Check.'); return; }
     await stop();
     setMode('live');
     const attempt = ++epoch.current;
@@ -124,7 +124,7 @@ function Dashboard() {
         <Text accessibilityLiveRegion="polite" style={styles.heroTitle}>{status}</Text>
         <Text style={styles.muted}>{liveCount} / 9 sensors reporting · {mode === 'demo' ? 'No hardware connected' : 'Four IMUs · three flex · two humidity'}</Text>
         <View style={styles.actions}>
-          <Button label="Find my shirt" onPress={scan} disabled={['Scanning', 'Connecting'].includes(status)} />
+          <Button label="Find my shirt" onPress={scan} disabled={['Checking Bluetooth', 'Scanning', 'Connecting'].includes(status)} />
           <Button label="Try demo" secondary onPress={startDemo} />
         </View>
         {mode !== 'idle' && <Button label="Disconnect / stop" secondary onPress={stop} />}

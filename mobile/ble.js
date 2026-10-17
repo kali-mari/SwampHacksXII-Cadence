@@ -23,24 +23,33 @@ export async function createShirtClient() {
   return {
     async scan(onDevice, onStatus, onError) {
       await disconnect();
+      const attempt = generation;
+      onStatus('Checking Bluetooth');
       if (Platform.OS === 'android') {
         const permissions = Number(Platform.Version) >= 31
           ? [PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT]
           : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
         const granted = await PermissionsAndroid.requestMultiple(permissions);
         if (permissions.some(p => granted[p] !== PermissionsAndroid.RESULTS.GRANTED))
-          throw new Error('Bluetooth permissions are required. Enable them in Settings.');
+          throw new Error('Allow Nearby devices in Android Settings → Apps → Posture Check → Permissions. On Android 11 or older, also allow Location and turn on Location services.');
       }
       // Instantiating the native manager triggers iOS's Bluetooth permission prompt.
-      const state = await manager.state();
+      if (generation !== attempt) return;
+      let state = await manager.state();
+      // Android shows its own Bluetooth-enable dialog after an explicit scan tap.
+      if (Platform.OS === 'android' && state === 'PoweredOff') {
+        await manager.enable();
+        state = await manager.state();
+      }
+      if (generation !== attempt) return;
       if (state !== 'PoweredOn') throw new Error(`Bluetooth is ${state}. Enable Bluetooth and allow access, then scan again.`);
-      const attempt = generation;
       onStatus('Scanning');
       await manager.startDeviceScan([SERVICE_UUID], { allowDuplicates: false }, (error, found) => {
         if (generation !== attempt) return;
         if (error) { stopScan(); onError(error); return; }
         if (found) onDevice({id: found.id, name: found.name || found.localName || 'PostureShirt'});
       });
+      if (generation !== attempt) return;
       scanTimer = setTimeout(() => {
         if (generation === attempt) { stopScan(); onStatus('Scan finished'); }
       }, 10000);

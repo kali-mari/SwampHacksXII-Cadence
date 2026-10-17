@@ -12,12 +12,18 @@
         "NSBluetoothAlwaysUsageDescription": "Connect to your PostureShirt to display workout sensor readings."
       }
     },
-    "android": { "package": "com.swamphacks.posturecheck" },
+    "android": {
+      "package": "com.swamphacks.posturecheck"
+    },
     "plugins": [
-      ["react-native-ble-plx", {
-        "isBackgroundEnabled": false,
-        "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings."
-      }]
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings.",
+          "neverForLocation": true
+        }
+      ]
     ]
   }
 }
