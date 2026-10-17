@@ -3,7 +3,17 @@
 .vscode/c_cpp_properties.json
 .vscode/ipch/
 
+<<<<<<< HEAD
 # Environment and Secret Files
 .env
 *.env
 secrets.h
+=======
+# Expo mobile app
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/ios/
+mobile/android/
+.vscode/
+>>>>>>> f2b1d1101409a180465dc18973181188a7c57454

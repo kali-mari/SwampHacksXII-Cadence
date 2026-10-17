@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Posture Check",
+    "slug": "posture-check",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.swamphacks.posturecheck",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Connect to your PostureShirt to display workout sensor readings."
+      }
+    },
+    "android": {
+      "package": "com.swamphacks.posturecheck"
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings."
+        }
+      ],
+      "expo-status-bar"
+    ]
+  }
+}
