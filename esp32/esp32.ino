@@ -24,9 +24,13 @@ BLECharacteristic* dataCharacteristic = nullptr;
 std::atomic<bool> connected{false}, restartAdvertising{false};
 
 class ConnectionCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer*) override { connected = true; }
+  void onConnect(BLEServer*) override {
+    connected = true;
+    Serial.println("BLE CONNECTED: phone connected; enable notifications in app.");
+  }
   void onDisconnect(BLEServer*) override {
     connected = false;
+    Serial.println("BLE DISCONNECTED: restarting advertising.");
     restartAdvertising = true;
   }
 };
@@ -69,6 +73,7 @@ void setup() {
       Serial.printf("SHT40 %u: %s\n", i, humidityReady[i] ? "OK" : "missing");
     }
   }
+  Serial.println("Starting BLE as PostureShirt...");
   BLEDevice::init("PostureShirt");
   auto* server = BLEDevice::createServer();
   server->setCallbacks(new ConnectionCallbacks());
@@ -81,6 +86,7 @@ void setup() {
   advertising->addServiceUUID(SERVICE_UUID);
   advertising->setScanResponse(true);
   advertising->start();
+  Serial.printf("BLE advertising service: %s\n", SERVICE_UUID);
   if (SEND_DUMMY_DATA) Serial.println("DUMMY MODE: simulated readings over real Bluetooth; sensors are not read.");
   Serial.println("PostureShirt ready; flex_id,raw,mV,ohms CSV follows at 5 Hz");
 }

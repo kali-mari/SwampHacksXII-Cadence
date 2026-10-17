@@ -52,7 +52,7 @@ function Dashboard() {
       setNow(Date.now()); setReadings({...cache.current});
     }, 200);
     const appState = AppState.addEventListener('change', state => {
-      if (state !== 'active') {
+      if (state === 'background') {
         epoch.current++;
         client.current?.disconnect().catch(() => {});
         setStatus('Paused — reconnect when active');

@@ -36,6 +36,12 @@ export async function createShirtClient() {
       // Instantiating the native manager triggers iOS's Bluetooth permission prompt.
       if (generation !== attempt) return;
       let state = await manager.state();
+      // A newly created native BLE manager can briefly report Unknown/Resetting.
+      for (let retry = 0; retry < 20 && ['Unknown', 'Resetting'].includes(state); retry++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (generation !== attempt) return;
+        state = await manager.state();
+      }
       // Android shows its own Bluetooth-enable dialog after an explicit scan tap.
       if (Platform.OS === 'android' && state === 'PoweredOff') {
         await manager.enable();
