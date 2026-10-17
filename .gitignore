@@ -13,4 +13,6 @@ mobile/.expo/
 mobile/dist/
 mobile/ios/
 mobile/android/
+# Cloud backend
+cloudbackend/node_modules/
 .vscode/

@@ -48,7 +48,19 @@ Displays four IMUs, three flex sensors (elbows and spine), and two SHT40s. The
 BLE UUIDs in protocol.mjs must match esp32/config.h. Notifications are decoded from
 base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The app
 disconnects in background; scan/connect again on return. Flex readings are resistance,
-not calibrated joint angles. No trained form scores, database, or recording yet.
+not calibrated joint angles.
+
+The **Developer data capture** page records valid, non-simulated BLE packets in
+memory during a run. Finish the run and choose **Save as good** or **Save as bad**
+to upload its label and samples to TigerData. Demo readings are excluded. Configure
+`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in `mobile/.env` before
+starting Expo; use the URL and development token configured for cloudbackend. The
+TigerData credentials must remain in the backend's environment, never in the mobile
+app. The shared collector token is embedded in the development app, so restrict
+backend access and do not treat it as production authentication. See
+[cloudbackend setup](../cloudbackend/README.md) to
+create the database tables and start/deploy the API. Unsaved in-memory runs are
+lost if the app closes.
 
 ## Checks
 
