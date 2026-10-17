@@ -18,7 +18,7 @@ FlexSensor flex[FLEX_COUNT] = {FlexSensor(FLEX_PINS[0]), FlexSensor(FLEX_PINS[1]
 TwoWire secondBus(1);
 TwoWire* buses[2] = {&Wire, &secondBus};
 bool busReady[2] = {};
-Adafruit_MPU6050 imus[IMU_COUNT];
+Adafruit_MPU6050 imus[IMU_COUNT] = {};
 Adafruit_SHT4x humidity[HUMIDITY_COUNT];
 bool imuReady[IMU_COUNT] = {}, humidityReady[HUMIDITY_COUNT] = {};
 BLECharacteristic* dataCharacteristic = nullptr;
@@ -47,6 +47,7 @@ void publish(uint8_t* packet) {
   }
 }
 
+// Debug function to ensure bluetooth transmission working
 void updateBleLed() {
   if (!BLE_STATUS_LED_AVAILABLE) return;
   static uint32_t lastToggle = 0;
@@ -108,7 +109,8 @@ void setup() {
       Serial.printf("IMU %u: %s\n", i, imuReady[i] ? "OK" : "missing");
     }
     for (uint8_t i = 0; i < HUMIDITY_COUNT; ++i) {
-      humidityReady[i] = busReady[i] && humidity[i].begin(buses[i]);
+      humidityReady[i] = busReady[HUMIDITY_BUS[i]] &&
+          humidity[i].begin(buses[HUMIDITY_BUS[i]]);
       if (humidityReady[i]) humidity[i].setHeater(SHT4X_NO_HEATER);
       Serial.printf("SHT40 %u: %s\n", i, humidityReady[i] ? "OK" : "missing");
     }
