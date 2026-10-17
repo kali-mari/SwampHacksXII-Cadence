@@ -10,6 +10,7 @@
 #include "config.h"
 #include "flex_sensor.h"
 #include "protocol.h"
+#include "dummy_data.h"
 
 FlexSensor flex[FLEX_COUNT] = {FlexSensor(FLEX_PINS[0]), FlexSensor(FLEX_PINS[1]),
                                FlexSensor(FLEX_PINS[2])};
@@ -43,9 +44,9 @@ int16_t quantize(float value, float scale) {
 
 void setup() {
   Serial.begin(115200);  // Do not wait for USB: also runs from a battery.
-  for (uint8_t i = 0; i < FLEX_COUNT; ++i)
+  if (!SEND_DUMMY_DATA) for (uint8_t i = 0; i < FLEX_COUNT; ++i)
     if (FLEX_ENABLED[i]) flex[i].begin();
-  if (ENABLE_I2C_SENSORS) {
+  if (!SEND_DUMMY_DATA && ENABLE_I2C_SENSORS) {
     for (uint8_t bus = 0; bus < 2; ++bus) {
       busReady[bus] = buses[bus]->begin(I2C_SDA[bus], I2C_SCL[bus], 100000);
       buses[bus]->setTimeOut(25);
@@ -80,11 +81,30 @@ void setup() {
   advertising->addServiceUUID(SERVICE_UUID);
   advertising->setScanResponse(true);
   advertising->start();
+  if (SEND_DUMMY_DATA) Serial.println("DUMMY MODE: simulated readings over real Bluetooth; sensors are not read.");
   Serial.println("PostureShirt ready; flex_id,raw,mV,ohms CSV follows at 5 Hz");
 }
 
 void loop() {
   if (restartAdvertising.exchange(false)) BLEDevice::startAdvertising();
+  if (SEND_DUMMY_DATA) {
+    static uint32_t lastDummy = 0, lastStatus = 0;
+    static uint8_t slot = 0;
+    const uint32_t now = millis();
+    if (static_cast<uint32_t>(now - lastStatus) >= 1000) {
+      lastStatus = now;
+      Serial.printf("DUMMY BLE: %s\n", connected.load() ? "connected; sending" : "advertising; waiting for app");
+    }
+    if (connected.load() && static_cast<uint32_t>(now - lastDummy) >= 20) {
+      lastDummy = now;
+      uint8_t packet[20];
+      makeDummyPacket(packet, slot, now);
+      publish(packet);
+      slot = (slot + 1) % 9;
+    }
+    delay(1);
+    return;
+  }
   static uint32_t lastSample = 0, lastHumidity = 0, lastLog = 0;
   uint32_t now = millis();
   if (static_cast<uint32_t>(now - lastSample) < SAMPLE_PERIOD_MS) {

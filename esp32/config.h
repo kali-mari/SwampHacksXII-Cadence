@@ -1,6 +1,9 @@
 #pragma once
 #include <Arduino.h>
 
+// Set false and re-upload to read physical sensors instead.
+constexpr bool SEND_DUMMY_DATA = true;
+
 // Full two-bus shirt. Disable individual flex inputs when bench testing.
 constexpr bool ENABLE_I2C_SENSORS = true;
 constexpr uint8_t IMU_COUNT = 4;

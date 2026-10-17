@@ -11,7 +11,7 @@ export function decodePacket(bytes) {
   if (![1, 2, 3].includes(type) || id >= (type === 1 ? 3 : type === 2 ? 4 : 2))
     throw new Error('Unknown sensor');
   const base = { version: 1, type, id, valid: !!(v.getUint8(3) & 1),
-    deviceMs: v.getUint32(4, true) };
+    simulated: !!(v.getUint8(3) & 2), deviceMs: v.getUint32(4, true) };
   if (!base.valid) return base; // Never turn a failed read into a plausible zero.
   if (type === 1) return { ...base, raw: v.getUint16(8, true),
     millivolts: v.getUint16(10, true), resistanceOhms: v.getUint32(12, true) };
