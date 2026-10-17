@@ -16,7 +16,7 @@ FlexReading FlexSensor::read() {
   }
   FlexReading r{static_cast<uint16_t>(raw / 16),
                 static_cast<uint16_t>(mv / 16), NAN};
-  // 3V3 -> flex -> ADC node -> fixed resistor -> GND.
+
   if (r.millivolts > 20 && r.millivolts < DIVIDER_SUPPLY_MV - 20) {
     r.resistanceOhms = FIXED_RESISTOR_OHMS *
         (DIVIDER_SUPPLY_MV / r.millivolts - 1.0f);
