@@ -13,21 +13,25 @@
     "build:android": "npx eas-cli@latest build --platform android --profile development"
   },
   "dependencies": {
-    "expo": "~58.0.14",
-    "expo-constants": "~58.0.12",
-    "expo-dev-client": "~58.0.14",
-    "expo-status-bar": "~58.0.3",
-    "react": "19.3.0",
-    "react-native": "0.88.0",
+    "buffer": "^6.0.3",
+    "expo": "57",
+    "expo-constants": "~57.0.22",
+    "expo-dev-client": "~57.0.20",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
     "react-native-ble-plx": "3.5.1",
-    "react-native-safe-area-context": "5.10.1",
-    "buffer": "^6.0.3"
+    "react-native-safe-area-context": "~5.7.0"
   },
   "engines": {
     "node": "^22.13.0 || ^24.3.0 || >=26.0.0"
   },
   "devDependencies": {
+<<<<<<< HEAD
     "@types/react": "~19.3.0",
+=======
+    "@types/react": "~19.2.4",
+>>>>>>> 61ae9f7356df14e72802d5b25e3fc893321265f0
     "typescript": "~6.0.3"
   }
 }

@@ -33,9 +33,16 @@ neverForLocation because this app does not derive physical location from BLE.
 Android 11 and older also need Location permission and Location services enabled.
 After changing app.json/plugins or native dependencies, build and install a new APK.
 
+<<<<<<< HEAD
 For demo-only Expo Go preview, run `npm run start:demo` and tap **Try demo**.
 The project uses SDK 58, so Expo Go must support that SDK. A development build
 avoids depending on Expo Go's bundled native modules.
+=======
+Anders Note: Run Set-ExecutionPolicy Bypass -Scope Process in terminal if getting
+error like "cannot be loaded because running scripts is disabled on this system."
+
+## Real Bluetooth on an iPhone from Linux Mint
+>>>>>>> 61ae9f7356df14e72802d5b25e3fc893321265f0
 
 ## Data and limitations
 
