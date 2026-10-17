@@ -17,7 +17,7 @@ function SensorCard({sensor, reading, now}) {
   const usable = reading?.valid;
   return <View style={styles.card}>
     <View style={styles.row}><Text style={styles.cardTitle}>{sensor.name}</Text>
-      <Text style={{color: status === 'Live' ? '#8eedba' : '#eac984'}}>{status}</Text></View>
+      <Text style={{color: status === 'Live' ? '#8eedba' : '#eac984'}}>{status}{reading?.simulated ? ' · Dummy' : ''}</Text></View>
     {sensor.type === 1 && <>
       <Text style={styles.value}>{usable ? fmt(reading.resistanceOhms / 1000, 1) : '—'} <Text style={styles.unit}>kΩ</Text></Text>
       <Text style={styles.muted}>{usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Waiting for a valid flex reading'}</Text>
@@ -129,6 +129,8 @@ function Dashboard() {
         </View>
         {mode !== 'idle' && <Button label="Disconnect / stop" secondary onPress={stop} />}
       </View>
+      {mode === 'live' && Object.values(readings).some(r => r.simulated) &&
+        <Text style={styles.notice}>ESP32 dummy mode: simulated sensor values received over real Bluetooth.</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       {status === 'Scan finished' && devices.length === 0 && <Text style={styles.notice}>No shirts found. Power on the Feather, keep it nearby, and disconnect other BLE apps before scanning again.</Text>}
       {devices.map(d => <View key={d.id} style={styles.card}>
