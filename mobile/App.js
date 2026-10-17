@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
 import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
+import { validateRunPayload } from './training.mjs';
 
 const fmt = (v, digits = 2) => Number.isFinite(v) ? v.toFixed(digits) : '—';
+const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
 function Button({label, onPress, disabled, secondary}) {
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress}
     style={({pressed}) => [styles.button, secondary && styles.secondary, (disabled || pressed) && {opacity: .5}]}>
@@ -38,22 +40,32 @@ function SensorCard({sensor, reading, now}) {
 }
 function Dashboard() {
   const [mode, setMode] = useState('idle');
+  const [page, setPage] = useState('dashboard');
   const [status, setStatus] = useState('Ready');
   const [error, setError] = useState('');
   const [devices, setDevices] = useState([]);
   const [readings, setReadings] = useState({});
   const [now, setNow] = useState(Date.now());
+  const [apiUrl, setApiUrl] = useState(process.env.EXPO_PUBLIC_API_URL || '');
+  const [collecting, setCollecting] = useState(false);
+  const [sampleCount, setSampleCount] = useState(0);
+  const [runStartedAt, setRunStartedAt] = useState(null);
+  const [runEndedAt, setRunEndedAt] = useState(null);
+  const [saving, setSaving] = useState(false);
   const client = useRef(null), cache = useRef({}), epoch = useRef(0), mounted = useRef(true);
+  const captureActive = useRef(false), samples = useRef([]);
   const isExpoGo = Constants.executionEnvironment === 'storeClient';
   const reportError = e => { if (mounted.current) { setError(e.message || String(e)); setStatus('Needs attention'); } };
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => {
       setNow(Date.now()); setReadings({...cache.current});
+      if (captureActive.current) setSampleCount(samples.current.length);
     }, 200);
     const appState = AppState.addEventListener('change', state => {
       if (state === 'background') {
         epoch.current++;
+        if (captureActive.current) finishRun();
         client.current?.disconnect().catch(() => {});
         setStatus('Paused — reconnect when active');
       }
@@ -75,7 +87,73 @@ function Dashboard() {
     return () => clearInterval(timer);
   }, [mode]);
   const reset = () => { cache.current = {}; setReadings({}); setError(''); };
+  function receiveReading(reading) {
+    const receivedAt = Date.now();
+    const stored = {...reading, receivedAt};
+    cache.current[sensorKey(reading)] = stored;
+    if (captureActive.current && reading.valid && !reading.simulated) {
+      const sample = {...stored};
+      delete sample.receivedAt;
+      samples.current.push({...sample, capturedAt: new Date(receivedAt).toISOString()});
+    }
+  }
+  function startRun() {
+    if (mode !== 'live' || status !== 'Connected') {
+      setError('Connect to the shirt over Bluetooth before starting a training run.');
+      return;
+    }
+    samples.current = [];
+    setSampleCount(0);
+    setRunStartedAt(new Date().toISOString());
+    setRunEndedAt(null);
+    captureActive.current = true;
+    setCollecting(true);
+    setError('');
+  }
+  function finishRun() {
+    if (!captureActive.current) return;
+    captureActive.current = false;
+    setCollecting(false);
+    setSampleCount(samples.current.length);
+    setRunEndedAt(new Date().toISOString());
+  }
+  async function saveRun(label) {
+    if (!apiUrl.trim()) {
+      setError('Set EXPO_PUBLIC_API_URL to your deployed cloudbackend API URL before saving.');
+      return;
+    }
+    if (!collectorApiKey) {
+      setError('Set EXPO_PUBLIC_COLLECTOR_API_KEY for the developer collector before saving.');
+      return;
+    }
+    const payload = {startedAt: runStartedAt, endedAt: runEndedAt, label, samples: samples.current};
+    try {
+      validateRunPayload(payload);
+      setSaving(true);
+      setError('');
+      const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${collectorApiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `Cloud save failed (${response.status}).`);
+      samples.current = [];
+      setSampleCount(0);
+      setRunStartedAt(null);
+      setRunEndedAt(null);
+      setStatus(`Saved ${label} run · ${result.sampleCount} samples`);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
   async function stop() {
+    if (captureActive.current) finishRun();
     epoch.current++; setMode('idle'); setStatus('Ready'); setDevices([]);
     await client.current?.disconnect().catch(reportError);
     reset();
@@ -107,8 +185,7 @@ function Dashboard() {
     const attempt = epoch.current;
     try {
       await client.current.connect(device.id, r => {
-        if (attempt === epoch.current && mounted.current)
-          cache.current[sensorKey(r)] = {...r, receivedAt: Date.now()};
+        if (attempt === epoch.current && mounted.current) receiveReading(r);
       }, value => { if (attempt === epoch.current && mounted.current) setStatus(value); }, reportError);
     } catch (e) { if (attempt === epoch.current) reportError(e); }
   }
@@ -119,6 +196,10 @@ function Dashboard() {
       <Text style={styles.eyebrow}>SWAMPHACKS / WEARABLE LAB</Text>
       <Text style={styles.title}>Posture Check</Text>
       <Text style={styles.subtitle}>Your shirt. Every signal.</Text>
+      <View style={styles.actions}>
+        <Button label="Dashboard" secondary={page !== 'dashboard'} onPress={() => setPage('dashboard')} />
+        <Button label="Developer data capture" secondary={page !== 'collection'} onPress={() => setPage('collection')} />
+      </View>
       <View style={styles.hero}>
         <Text style={styles.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
         <Text accessibilityLiveRegion="polite" style={styles.heroTitle}>{status}</Text>
@@ -129,6 +210,36 @@ function Dashboard() {
         </View>
         {mode !== 'idle' && <Button label="Disconnect / stop" secondary onPress={stop} />}
       </View>
+      {page === 'collection' && <View style={styles.collector}>
+        <Text style={styles.section}>Training data collection</Text>
+        <Text style={styles.muted}>Capture valid, non-simulated BLE sensor packets, label the whole run, and save it to TigerData.</Text>
+        <Text style={styles.axisLabel}>CLOUDBACKEND API URL (HTTPS WHEN DEPLOYED)</Text>
+        <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
+          keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
+          value={apiUrl} onChangeText={setApiUrl} style={styles.input} />
+        {collecting
+          ? <Button label={`Finish run · ${sampleCount} samples`} onPress={finishRun} />
+          : runEndedAt
+            ? <>
+              <Text style={styles.collectorCount}>Run ready · {sampleCount} samples</Text>
+              <View style={styles.actions}>
+                <Button label="Save as good" onPress={() => saveRun('good')} disabled={saving || sampleCount === 0} />
+                <Button label="Save as bad" secondary onPress={() => saveRun('bad')} disabled={saving || sampleCount === 0} />
+              </View>
+              <Button label="Discard run" secondary disabled={saving} onPress={() => {
+                samples.current = [];
+                setSampleCount(0);
+                setRunStartedAt(null);
+                setRunEndedAt(null);
+                setError('');
+              }} />
+              {saving && <Text style={styles.muted}>Saving run and samples…</Text>}
+            </>
+            : <Button label="Start training run" onPress={startRun} disabled={saving} />}
+        {!!runStartedAt && <Text style={styles.muted}>Started {new Date(runStartedAt).toLocaleString()}</Text>}
+        {!!runEndedAt && sampleCount === 0 && <Text style={styles.notice}>No valid sensor samples were captured. Connect the shirt and record again.</Text>}
+        <Text style={styles.muted}>Demo and simulated ESP32 readings are excluded. Samples stay in memory until saved; keep the app open while recording.</Text>
+      </View>}
       {mode === 'live' && Object.values(readings).some(r => r.simulated) &&
         <Text style={styles.notice}>ESP32 dummy mode: simulated sensor values received over real Bluetooth.</Text>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
@@ -141,7 +252,7 @@ function Dashboard() {
         <Text style={styles.section}>{group === 'Flex' ? 'Bend signals' : group === 'IMU' ? 'Arm movement' : 'Shirt environment'}</Text>
         {SENSORS.filter(s => s.group === group).map(s => <SensorCard key={sensorKey(s)} sensor={s} reading={readings[sensorKey(s)]} now={now} />)}
       </View>)}
-      <Text style={styles.footer}>Raw sensor dashboard · Flex readings require mounted calibration before estimating angles. Form scoring and cloud storage are not connected.</Text>
+      <Text style={styles.footer}>Raw sensor dashboard · Flex readings require mounted calibration before estimating angles.</Text>
     </ScrollView>
   </SafeAreaView>;
 }
@@ -153,6 +264,9 @@ const styles = StyleSheet.create({
   title: {color: '#f0f5ec', fontSize: 36, fontWeight: '800', marginTop: 14},
   subtitle: {color: '#9db7aa', fontSize: 17, marginTop: 5, marginBottom: 24},
   hero: {backgroundColor: '#193329', borderRadius: 22, padding: 20, gap: 12},
+  collector: {backgroundColor: '#14251e', borderColor: '#2a4034', borderWidth: 1, borderRadius: 18, padding: 18, marginTop: 18, gap: 10},
+  collectorCount: {color: '#e8f6d4', fontSize: 20, fontWeight: '700'},
+  input: {color: '#e6f1ed', backgroundColor: '#0b1713', borderWidth: 1, borderColor: '#2a4034', borderRadius: 10, padding: 12},
   heroTitle: {fontSize: 26, color: '#e8f6d4', fontWeight: '700'},
   muted: {color: '#a6bdb1', fontSize: 12, lineHeight: 19},
   actions: {flexDirection: 'row', gap: 10, flexWrap: 'wrap'},
