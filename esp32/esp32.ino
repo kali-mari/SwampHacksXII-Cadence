@@ -22,6 +22,9 @@ Adafruit_SHT4x humidity[HUMIDITY_COUNT];
 bool imuReady[IMU_COUNT] = {}, humidityReady[HUMIDITY_COUNT] = {};
 BLECharacteristic* dataCharacteristic = nullptr;
 std::atomic<bool> connected{false}, restartAdvertising{false};
+uint32_t lastNotificationMs = 0;
+constexpr bool BLE_STATUS_LED_AVAILABLE = SEND_DUMMY_DATA ||
+  !FLEX_ENABLED[0] || FLEX_PINS[0] != LED_BUILTIN;
 
 class ConnectionCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer*) override {
@@ -39,7 +42,32 @@ void publish(uint8_t* packet) {
   if (connected.load()) {
     dataCharacteristic->setValue(packet, 20);
     dataCharacteristic->notify();
+    lastNotificationMs = millis();
   }
+}
+
+void updateBleLed() {
+  if (!BLE_STATUS_LED_AVAILABLE) return;
+  static uint32_t lastToggle = 0;
+  static bool active = false, ledOn = false;
+  const uint32_t now = millis();
+  const bool transmitting = connected.load() &&
+      static_cast<uint32_t>(now - lastNotificationMs) < 1000;
+  if (!transmitting) {
+    active = false;
+    ledOn = false;
+    digitalWrite(LED_BUILTIN, LOW);
+    return;
+  }
+  if (!active) {
+    active = true;
+    ledOn = true;
+    lastToggle = now;
+  } else if (static_cast<uint32_t>(now - lastToggle) >= 1000) {
+    ledOn = !ledOn;
+    lastToggle = now;
+  }
+  digitalWrite(LED_BUILTIN, ledOn ? HIGH : LOW);
 }
 
 int16_t quantize(float value, float scale) {
@@ -48,6 +76,12 @@ int16_t quantize(float value, float scale) {
 
 void setup() {
   Serial.begin(115200);  // Do not wait for USB: also runs from a battery.
+  if (BLE_STATUS_LED_AVAILABLE) {
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+  } else {
+    Serial.println("BLE LED disabled: onboard LED shares enabled flex input GPIO13.");
+  }
   if (!SEND_DUMMY_DATA) for (uint8_t i = 0; i < FLEX_COUNT; ++i)
     if (FLEX_ENABLED[i]) flex[i].begin();
   if (!SEND_DUMMY_DATA && ENABLE_I2C_SENSORS) {
@@ -92,6 +126,7 @@ void setup() {
 }
 
 void loop() {
+  updateBleLed();
   if (restartAdvertising.exchange(false)) BLEDevice::startAdvertising();
   if (SEND_DUMMY_DATA) {
     static uint32_t lastDummy = 0, lastStatus = 0;
