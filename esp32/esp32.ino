@@ -7,6 +7,7 @@
 #include <Adafruit_SHT4x.h>
 #include <atomic>
 #include <math.h>
+#include <esp_system.h>
 #include "config.h"
 #include "flex_sensor.h"
 #include "protocol.h"
@@ -54,9 +55,9 @@ void updateBleLed() {
   const bool transmitting = connected.load() &&
       static_cast<uint32_t>(now - lastNotificationMs) < 1000;
   if (!transmitting) {
+    // Visible proof that loop() is running even before a phone connects.
     active = false;
-    ledOn = false;
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LED_BUILTIN, (now / 500) % 2 ? HIGH : LOW);
     return;
   }
   if (!active) {
@@ -75,7 +76,12 @@ int16_t quantize(float value, float scale) {
 }
 
 void setup() {
-  Serial.begin(115200);  // Do not wait for USB: also runs from a battery.
+  Serial.begin(115200);
+  // Bounded wait for native USB enumeration, never require a monitor to run BLE.
+  const uint32_t usbStart = millis();
+  while (!Serial && millis() - usbStart < 2000) delay(10);
+  Serial.println("\nPOSTURE BOOT: entering setup (dummy BLE test).");
+  Serial.printf("Reset reason: %d; free heap: %u\n", static_cast<int>(esp_reset_reason()), ESP.getFreeHeap());
   if (BLE_STATUS_LED_AVAILABLE) {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
