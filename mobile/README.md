@@ -28,6 +28,9 @@ Expo Go can preview demo mode only. The Bluetooth library is loaded only when
 connecting from a native development build. **Find my shirt** explains the build
 requirement when running in Expo Go.
 
+Anders Note: Run Set-ExecutionPolicy Bypass -Scope Process in terminal if getting
+error like "cannot be loaded because running scripts is disabled on this system."
+
 ## Real Bluetooth on an iPhone from Linux Mint
 
 A physical iPhone and a custom development build are required. Linux cannot run
