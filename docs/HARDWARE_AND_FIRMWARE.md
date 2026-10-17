@@ -31,25 +31,51 @@ angle and is not linear in elbow degrees. Avoid creasing, reversing the intended
 bend, or stressing the solder tabs. Give the elbow sensor a rounded fabric guide
 so the inner elbow does not sharply fold it.
 
-## Upload
+## Build and upload with PlatformIO
 
-1. Install Arduino IDE and Espressif's **esp32** board package.
-2. Select **Adafruit Feather ESP32-S3 2MB PSRAM** for the stated 4MB/2MB board.
-   Enable USB CDC on boot and select its USB port.
-3. In Library Manager install **Adafruit MPU6050** and **Adafruit SHT4x**, including
-   dependencies (Adafruit BusIO and Adafruit Unified Sensor). BLE comes with the
-   Espressif board package; do not install the obsolete standalone ESP32 BLE library.
-4. Open `esp32/esp32.ino`. All .cpp/.h files in that folder build with the sketch.
-5. The default enables both I2C buses and all three flex sensors. For a single-flex
-   bench test set ENABLE_I2C_SENSORS=false and FLEX_ENABLED={true, false, false}.
-   Upload and open Serial Monitor at 115200. Expect flex_id,raw,mV,ohms lines
-   at 5 Hz per enabled flex sensor. Record neutral and comfortably bent values.
-6. In a BLE inspector connect to **PostureShirt**, find the service UUID from
-   config.h, and subscribe to the DATA characteristic. You should see 20-byte
-   notifications at a target 50 Hz. Disconnect and verify it advertises again.
+1. Install **PlatformIO IDE** from the VS Code Extensions panel.
+2. Open this repository folder (the folder containing `platformio.ini`) in VS Code.
+   PlatformIO downloads the configured ESP32 platform, compiler, and sensor libraries.
+   The board is configured as Adafruit Feather ESP32-S3 4MB Flash / 2MB PSRAM.
+3. Connect the Feather with a USB data cable. In the PlatformIO toolbar, use
+   **Build** (checkmark), then **Upload** (right arrow), then **Serial Monitor**.
+   The monitor is configured for 115200 baud and USB CDC is enabled.
+4. Alternatively, in a **PlatformIO Core CLI** terminal opened from PlatformIO,
+   run these commands from the repository root:
 
-No attached-board upload or firmware compilation has been performed in this
-workspace. The local machine does not have arduino-cli or PlatformIO installed.
+   ```sh
+   pio run
+   pio run --target upload
+   pio device monitor
+   ```
+
+5. If multiple serial devices are connected, run `pio device list` and explicitly
+   select the Feather with `pio run --target upload --upload-port YOUR_PORT` and
+   `pio device monitor --port YOUR_PORT`. Close other serial monitors before upload.
+6. If the upload cannot connect, hold BOOT, tap RESET, release BOOT, and retry
+   upload after selecting the newly enumerated port. On Linux, a permission-denied
+   serial port requires the appropriate serial-device group/udev setup.
+
+The existing `esp32/esp32.ino` and all sibling .cpp/.h files are built directly;
+no copying into a new project or Arduino IDE is needed. PlatformIO uses the
+Arduino framework under the hood, with BLE included in the ESP32 platform.
+Dependencies are declared in platformio.ini. Do not install a separate ESP32 BLE
+library.
+
+The default enables both I2C buses and all three flex sensors. For a single-flex
+bench test set ENABLE_I2C_SENSORS=false and FLEX_ENABLED={true, false, false} in
+esp32/config.h. Serial output includes I2C startup status and
+flex_id,raw,mV,ohms lines at 5 Hz per enabled flex sensor. Record neutral and
+comfortably bent values.
+
+In a BLE inspector connect to **PostureShirt**, find the service UUID from config.h,
+and subscribe to the DATA characteristic. You should see 20-byte notifications.
+Disconnect and verify it advertises again.
+
+No attached-board upload or full firmware compilation has been performed here.
+PlatformIO is not installed locally, and a temporary installation attempt could
+not proceed because the host Python lacks the venv/ensurepip component. Build
+with the PlatformIO VS Code extension to validate the complete firmware.
 
 ## Full hardware: two independent I2C buses, no multiplexer
 
