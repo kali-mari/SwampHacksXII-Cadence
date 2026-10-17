@@ -182,8 +182,8 @@ participant, calibration, mounting orientation, labels, and model version separa
 No database connection is invented here. If this means Tiger Data/Timescale, your
 backend would ingest time-series rows over authenticated HTTP; never put database
 credentials in the firmware or mobile bundle. Confirm the actual service before
-implementing that adapter. No React Native app or backend exists in this repository
-yet, so the provided mobile files are integration examples.
+implementing that adapter. An Expo dashboard now exists in mobile/ (see mobile/README.md). No backend
+or database adapter is implemented yet.
 
 ## First form model
 
