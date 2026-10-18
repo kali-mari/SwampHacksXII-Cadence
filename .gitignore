@@ -17,3 +17,7 @@ mobile/android/
 
 #Machine Learning
 MachineLearning\run_training_data.csv
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
