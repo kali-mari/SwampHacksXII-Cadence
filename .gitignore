@@ -16,3 +16,12 @@ mobile/android/
 # Cloud backend
 cloudbackend/node_modules/
 .vscode/
+
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Machine Learning model files
+MachineLearning\*.pkl
+run_training_data.csv
