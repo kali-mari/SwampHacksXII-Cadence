@@ -129,6 +129,8 @@ export function useShirtConnection() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Cloud save failed (${response.status}).`);
+      if (typeof result.runId !== 'string' || result.sampleCount !== payload.samples.length)
+        throw new Error('Cloud API returned an invalid save confirmation. Check past runs before retrying.');
       discardRun();
       setStatus(`Saved ${label ? label + ' ' : ''}run · ${result.sampleCount} samples`);
     } catch (e) {

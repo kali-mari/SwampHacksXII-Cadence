@@ -1,12 +1,12 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SENSORS, sensorKey } from '../sensors.mjs';
 import { shared } from '../theme';
 import { Button, BackButton, ConnectionPanel, DeviceList, SensorCard } from '../components';
 
 export default function CurrentRunScreen({ navigate, shirt }) {
-  const { mode, readings, now, collecting, sampleCount, runStartedAt, runEndedAt, saving,
+  const { mode, readings, now, apiUrl, setApiUrl, collecting, sampleCount, runStartedAt, runEndedAt, saving,
     startRun, finishRun, discardRun, saveRun, error } = shirt;
   const elapsedS = collecting && runStartedAt ? Math.max(0, Math.floor((now - Date.parse(runStartedAt)) / 1000)) : null;
 
@@ -22,6 +22,10 @@ export default function CurrentRunScreen({ navigate, shirt }) {
       <DeviceList shirt={shirt} />
 
       <View style={[shared.hero, { marginTop: 18 }]}>
+        <Text style={shared.axisLabel}>CLOUDBACKEND API URL</Text>
+        <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
+          keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
+          value={apiUrl} onChangeText={setApiUrl} style={shared.input} />
         {collecting
           ? <>
             <Text style={shared.heroTitle}>{String(Math.floor(elapsedS / 60)).padStart(2, '0')}:{String(elapsedS % 60).padStart(2, '0')}</Text>

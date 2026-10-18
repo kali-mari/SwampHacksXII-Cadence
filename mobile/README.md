@@ -68,17 +68,21 @@ base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The a
 disconnects in background; scan/connect again on return. Flex readings are resistance,
 not calibrated joint angles.
 
-The **Developer data capture** page records valid, non-simulated BLE packets in
-memory during a run. Finish the run and choose **Save as good** or **Save as bad**
-to upload its label and samples to TigerData. Demo readings are excluded. Configure
-`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in `mobile/.env` before
-starting Expo; use the URL and development token configured for cloudbackend. The
-TigerData credentials must remain in the backend's environment, never in the mobile
-app. The shared collector token is embedded in the development app, so restrict
-backend access and do not treat it as production authentication. See
-[cloudbackend setup](../cloudbackend/README.md) to
-create the database tables and start/deploy the API. Unsaved in-memory runs are
-lost if the app closes.
+**Current Run** and **Dev Testing** record valid, non-simulated BLE packets in
+memory. Save a Current Run to upload its samples without a label, or save a Dev
+Testing capture with a manually selected good/bad label for ML training. The
+**Past Runs** screen fetches saved sessions and their per-sensor averages from
+the backend. Demo readings are excluded.
+
+Configure `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in
+`mobile/.env` before starting Expo; the API URL can also be edited from the
+Current Run, Dev Testing, and Past Runs screens. Use the URL and development
+token configured for cloudbackend. TigerData credentials must remain in the
+backend's environment, never in the mobile app. The shared collector token is
+embedded in the development app, so restrict backend access and do not treat it
+as production authentication. See [cloudbackend setup](../cloudbackend/README.md)
+to create the database tables and start/deploy the API. Unsaved in-memory runs
+are lost if the app closes.
 
 ## Checks
 

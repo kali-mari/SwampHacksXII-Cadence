@@ -72,10 +72,11 @@ In a BLE inspector connect to **PostureShirt**, find the service UUID from confi
 and subscribe to the DATA characteristic. You should see 20-byte notifications.
 Disconnect and verify it advertises again.
 
-No attached-board upload or full firmware compilation has been performed here.
-PlatformIO is not installed locally, and a temporary installation attempt could
-not proceed because the host Python lacks the venv/ensurepip component. Build
-with the PlatformIO VS Code extension to validate the complete firmware.
+The Feather ESP32-S3 firmware has been compiled successfully with PlatformIO
+using the default full-sensor configuration. This verifies compilation and
+linking, not sensor wiring or BLE behavior. No board was attached, so firmware
+upload, serial output, sensor detection, and phone-to-shirt BLE testing remain
+to be done during hardware bring-up.
 
 ## Full hardware: two independent I2C buses, no multiplexer
 
