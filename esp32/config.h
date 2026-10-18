@@ -8,13 +8,14 @@ constexpr bool SEND_DUMMY_DATA = false;
 constexpr bool ENABLE_I2C_SENSORS = true;
 constexpr uint8_t IMU_COUNT = 4;
 constexpr uint8_t FLEX_COUNT = 2;
-// IDs: left elbow and right elbow.
-constexpr uint8_t FLEX_PINS[FLEX_COUNT] = {13, A1};
+// IDs: 0 left elbow (A0/GPIO18), 1 right elbow (A1/GPIO17).
+constexpr uint8_t FLEX_PINS[FLEX_COUNT] = {A0, A1};
 constexpr bool FLEX_ENABLED[FLEX_COUNT] = {true, true};
 constexpr uint8_t I2C_SDA[2] = {3, 5};
 constexpr uint8_t I2C_SCL[2] = {4, 6};
 constexpr uint8_t IMU_BUS[IMU_COUNT] = {0, 0, 1, 1};
-constexpr uint8_t IMU_ADDRESS[IMU_COUNT] = {0x68, 0x69, 0x68, 0x69};
+// Upper arms: AD0 to 3V3 (0x69); forearms: AD0 to GND (0x68).
+constexpr uint8_t IMU_ADDRESS[IMU_COUNT] = {0x69, 0x68, 0x69, 0x68};
 constexpr float DIVIDER_SUPPLY_MV = 3300.0f;
 constexpr float FIXED_RESISTOR_OHMS = 10000.0f;
 constexpr uint32_t SAMPLE_PERIOD_MS = 20;  // target 50 Hz, not a hard real-time guarantee
