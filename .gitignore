@@ -16,6 +16,3 @@ mobile/android/
 # Cloud backend
 cloudbackend/node_modules/
 .vscode/
-# Ignore compiled Python files
-*.pyc
-__pycache__/
