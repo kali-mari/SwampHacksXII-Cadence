@@ -29,10 +29,6 @@ function SensorCard({sensor, reading, now}) {
       <Text style={styles.axes}>{usable ? reading.gyroRadps.map(v => fmt(v, 3)).join('   /   ') : '—   /   —   /   —'}</Text>
       <Text style={styles.muted}>X / Y / Z</Text>
     </>}
-    {sensor.type === 3 && <Text style={styles.value}>
-      {usable ? fmt(reading.humidityPct, 1) : '—'}<Text style={styles.unit}> % RH   </Text>
-      {usable ? fmt(reading.temperatureC, 1) : '—'}<Text style={styles.unit}> °C</Text>
-    </Text>}
     {reading && <Text style={styles.timestamp}>Device {reading.deviceMs} ms · received {Math.max(0, Math.floor((now - reading.receivedAt) / 1000))}s ago</Text>}
   </View>;
 }
@@ -122,7 +118,7 @@ function Dashboard() {
       <View style={styles.hero}>
         <Text style={styles.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
         <Text accessibilityLiveRegion="polite" style={styles.heroTitle}>{status}</Text>
-        <Text style={styles.muted}>{liveCount} / 9 sensors reporting · {mode === 'demo' ? 'No hardware connected' : 'Four IMUs · three flex · two humidity'}</Text>
+        <Text style={styles.muted}>{liveCount} / {SENSORS.length} sensors reporting · {mode === 'demo' ? 'No hardware connected' : 'Four IMUs · two elbow flex sensors'}</Text>
         <View style={styles.actions}>
           <Button label="Find my shirt" onPress={scan} disabled={['Checking Bluetooth', 'Scanning', 'Connecting'].includes(status)} />
           <Button label="Try demo" secondary onPress={startDemo} />
@@ -137,8 +133,8 @@ function Dashboard() {
         <Text style={styles.cardTitle}>{d.name}</Text><Text style={styles.muted}>{d.id}</Text>
         <Button label="Connect" onPress={() => connect(d)} />
       </View>)}
-      {['Flex', 'IMU', 'Environment'].map(group => <View key={group}>
-        <Text style={styles.section}>{group === 'Flex' ? 'Bend signals' : group === 'IMU' ? 'Arm movement' : 'Shirt environment'}</Text>
+      {['Flex', 'IMU'].map(group => <View key={group}>
+        <Text style={styles.section}>{group === 'Flex' ? 'Bend signals' : 'Arm movement'}</Text>
         {SENSORS.filter(s => s.group === group).map(s => <SensorCard key={sensorKey(s)} sensor={s} reading={readings[sensorKey(s)]} now={now} />)}
       </View>)}
       <Text style={styles.footer}>Raw sensor dashboard · Flex readings require mounted calibration before estimating angles. Form scoring and cloud storage are not connected.</Text>
