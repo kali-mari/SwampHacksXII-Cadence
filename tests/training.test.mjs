@@ -7,10 +7,16 @@ const capturedAt = '2026-10-17T10:00:01.000Z';
 const samples = [
   {type: 1, id: 0, deviceMs: 100, valid: true, simulated: false, capturedAt,
     raw: 500, millivolts: 1200, resistanceOhms: 30000},
+  {type: 1, id: 1, deviceMs: 150, valid: true, simulated: false, capturedAt,
+    raw: 600, millivolts: 1300, resistanceOhms: 32000},
   {type: 2, id: 0, deviceMs: 200, valid: true, simulated: false, capturedAt,
     accelerationMps2: [1, 2, 9.81], gyroRadps: [0.1, 0.2, 0.3]},
-  {type: 3, id: 0, deviceMs: 300, valid: true, simulated: false, capturedAt,
-    temperatureC: 31, humidityPct: 65},
+  {type: 2, id: 1, deviceMs: 250, valid: true, simulated: false, capturedAt,
+    accelerationMps2: [1, 2, 9.81], gyroRadps: [0.1, 0.2, 0.3]},
+  {type: 2, id: 2, deviceMs: 300, valid: true, simulated: false, capturedAt,
+    accelerationMps2: [1, 2, 9.81], gyroRadps: [0.1, 0.2, 0.3]},
+  {type: 2, id: 3, deviceMs: 350, valid: true, simulated: false, capturedAt,
+    accelerationMps2: [1, 2, 9.81], gyroRadps: [0.1, 0.2, 0.3]},
 ];
 const run = overrides => ({
   startedAt,
@@ -21,7 +27,7 @@ const run = overrides => ({
   ...overrides,
 });
 
-test('accepts valid dev_testing runs and decoded flex, IMU, and environment samples', () => {
+test('accepts valid dev_testing runs with elbow flex and four IMU samples', () => {
   assert.doesNotThrow(() => validateRunPayload(run({label: 'bad'})));
 });
 
@@ -46,8 +52,8 @@ test('rejects empty runs, invalid labels, and reversed timestamps', () => {
 test('rejects simulated, invalid, malformed, or unknown sensor samples', () => {
   assert.throws(() => validateRunPayload(run({samples: [{...samples[0], simulated: true}]})), /non-simulated/);
   assert.throws(() => validateRunPayload(run({samples: [{...samples[0], valid: false}]})), /valid/);
-  assert.throws(() => validateRunPayload(run({samples: [{...samples[1], gyroRadps: [0.1]}]})), /incomplete/);
-  assert.throws(() => validateRunPayload(run({samples: [{...samples[1], accelerationMps2: [1, 2, 3, 4], gyroRadps: [0.1, 0.2]}]})), /incomplete/);
-  assert.throws(() => validateRunPayload(run({samples: [{...samples[2], id: 2}]})), /unknown sensor/);
+  assert.throws(() => validateRunPayload(run({samples: [{...samples[2], gyroRadps: [0.1]}]})), /incomplete/);
+  assert.throws(() => validateRunPayload(run({samples: [{...samples[2], accelerationMps2: [1, 2, 3, 4], gyroRadps: [0.1, 0.2]}]})), /incomplete/);
+  assert.throws(() => validateRunPayload(run({samples: [{...samples[2], id: 4}]})), /unknown sensor/);
   assert.throws(() => validateRunPayload(run({samples: [{...samples[0], type: '1'}]})), /unknown sensor/);
 });

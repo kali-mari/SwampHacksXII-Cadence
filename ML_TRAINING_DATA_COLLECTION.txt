@@ -1,0 +1,131 @@
+POSTURE CHECK - ML TRAINING DATA COLLECTION
+============================================================
+
+CURRENT STATUS
+--------------
+The TigerData schema has the current sensor-layout constraint, and the
+collector backend's database health check has succeeded. Restart the local
+backend after setting DB_SSLMODE=require so it uses that configuration.
+
+Phone-to-backend upload is ready only after the backend is reachable from the
+phone over HTTPS and the app has the correct collector URL and token.
+
+
+1. START THE COLLECTOR BACKEND
+------------------------------
+Open PowerShell and run:
+
+  cd "C:\Users\kalis\Downloads\SwampHacks 2026\SwampHacksXII-Posture-Check\cloudbackend"
+  npm start
+
+Leave this terminal open. The server listens on port 3000.
+
+The backend's private cloudbackend\.env file contains TigerData connection
+settings and COLLECTOR_API_KEY. It should also contain:
+
+  DB_SSLMODE=require
+
+Never share or commit this file. In require mode the database connection is
+TLS-encrypted, but the server certificate is not verified; use this
+development configuration only on a network you trust.
+
+
+2. CHECK THE BACKEND-TO-DATABASE CONNECTION
+-------------------------------------------
+In a second PowerShell window, run:
+
+  Invoke-RestMethod http://localhost:3000/health
+
+Expected response:
+
+  {"status":"ok"}
+
+If this fails, check the terminal running npm start for the backend error.
+Do not put TigerData credentials in the mobile app.
+
+
+3. MAKE THE BACKEND REACHABLE FROM THE PHONE
+--------------------------------------------
+The phone cannot use localhost to reach your computer. The Expo development
+link on port 8081 is also not the collector API.
+
+Deploy the collector backend or expose the computer's port 3000 through an
+HTTPS tunnel. Use the resulting phone-reachable HTTPS base URL in the app.
+Do not append /api/runs; the app adds the API route.
+
+
+4. CONFIGURE THE ACTIVE MOBILE APP
+----------------------------------
+Create or edit this file:
+
+  C:\Users\kalis\Downloads\SwampHacks 2026\SwampHacksXII-Posture-Check\mobile\mobile\.env
+
+Set:
+
+  EXPO_PUBLIC_API_URL=https://<phone-reachable-collector-url>
+  EXPO_PUBLIC_COLLECTOR_API_KEY=<same-value-as-COLLECTOR_API_KEY-in-cloudbackend-env>
+
+These are app settings, not TigerData database credentials. Restart Expo after
+editing the file so it loads the updated values.
+
+EXPO_PUBLIC_MODEL_API_URL is optional for collecting training data. It is used
+by the live TCN assessment service, not by the collector.
+
+
+5. CAPTURE LABELED TRAINING DATA
+--------------------------------
+1. Connect the physical shirt over Bluetooth.
+2. Confirm all six physical sensors are reporting:
+   - Flex type 1: IDs 0 and 1 (left and right elbow)
+   - IMU type 2: IDs 0, 1, 2, and 3
+3. Open Dev Testing, choose the correct posture label, and start a run.
+4. Stop the run and save it with the selected good/bad label.
+
+The app uploads the run when it is saved. Demo/simulated readings are excluded.
+Current Runs are unlabeled and are not used for supervised training unless
+they are labeled separately.
+
+
+6. VERIFY THAT TIGERDATA RECEIVED THE RUN
+-----------------------------------------
+Run this in TigerData's SQL Editor:
+
+  SELECT r.run_id, r.source, r.label, r.started_at,
+         COUNT(s.sample_id) AS samples,
+         COUNT(DISTINCT (s.sensor_type, s.sensor_id)) AS sensors
+  FROM training_runs AS r
+  JOIN training_samples AS s ON s.run_id = r.run_id
+  GROUP BY r.run_id, r.source, r.label, r.started_at
+  ORDER BY r.started_at DESC
+  LIMIT 10;
+
+A complete capture should show sensors = 6. If fewer sensors appear, check
+Bluetooth connection and sensor reporting, then make another capture.
+
+Optional detail query to verify the sensor IDs in a run:
+
+  SELECT sensor_type, sensor_id, COUNT(*) AS samples,
+         MIN(captured_at) AS first_sample,
+         MAX(captured_at) AS last_sample
+  FROM training_samples
+  WHERE run_id = '<run-id-from-query-above>'
+  GROUP BY sensor_type, sensor_id
+  ORDER BY sensor_type, sensor_id;
+
+Expected new-layout IDs:
+  type 1: IDs 0, 1
+  type 2: IDs 0, 1, 2, 3
+
+
+7. COLLECT ENOUGH DATA BEFORE TRAINING
+--------------------------------------
+The trainer requires at least 10 complete labeled runs per class:
+10 good and 10 bad. These are only minimum run counts, not a guarantee of a
+useful model. Collect substantially more varied examples across users,
+movements, and sessions before relying on model results. Keep each Dev Testing
+run consistently labeled; the current trainer applies one label to the whole
+run.
+
+After enough complete data has been collected, configure TigerData credentials
+for the training environment and follow MachineLearning\README.md to train and
+serve the TCN.

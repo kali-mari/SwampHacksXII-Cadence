@@ -4,7 +4,6 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 #include <Adafruit_MPU6050.h>
-#include <Adafruit_SHT4x.h>
 #include <atomic>
 #include <math.h>
 #include <esp_system.h>
@@ -13,14 +12,12 @@
 #include "protocol.h"
 #include "dummy_data.h"
 
-FlexSensor flex[FLEX_COUNT] = {FlexSensor(FLEX_PINS[0]), FlexSensor(FLEX_PINS[1]),
-                               FlexSensor(FLEX_PINS[2])};
+FlexSensor flex[FLEX_COUNT] = {FlexSensor(FLEX_PINS[0]), FlexSensor(FLEX_PINS[1])};
 TwoWire secondBus(1);
 TwoWire* buses[2] = {&Wire, &secondBus};
 bool busReady[2] = {};
 Adafruit_MPU6050 imus[IMU_COUNT] = {};
-Adafruit_SHT4x humidity[HUMIDITY_COUNT];
-bool imuReady[IMU_COUNT] = {}, humidityReady[HUMIDITY_COUNT] = {};
+bool imuReady[IMU_COUNT] = {};
 BLECharacteristic* dataCharacteristic = nullptr;
 std::atomic<bool> connected{false}, restartAdvertising{false};
 uint32_t lastNotificationMs = 0;
@@ -108,12 +105,6 @@ void setup() {
       }
       Serial.printf("IMU %u: %s\n", i, imuReady[i] ? "OK" : "missing");
     }
-    for (uint8_t i = 0; i < HUMIDITY_COUNT; ++i) {
-      humidityReady[i] = busReady[HUMIDITY_BUS[i]] &&
-          humidity[i].begin(buses[HUMIDITY_BUS[i]]);
-      if (humidityReady[i]) humidity[i].setHeater(SHT4X_NO_HEATER);
-      Serial.printf("SHT40 %u: %s\n", i, humidityReady[i] ? "OK" : "missing");
-    }
   }
   Serial.println("Starting BLE as PostureShirt...");
   BLEDevice::init("PostureShirt");
@@ -149,12 +140,12 @@ void loop() {
       uint8_t packet[20];
       makeDummyPacket(packet, slot, now);
       publish(packet);
-      slot = (slot + 1) % 9;
+      slot = (slot + 1) % 6;
     }
     delay(1);
     return;
   }
-  static uint32_t lastSample = 0, lastHumidity = 0, lastLog = 0;
+  static uint32_t lastSample = 0, lastLog = 0;
   uint32_t now = millis();
   if (static_cast<uint32_t>(now - lastSample) < SAMPLE_PERIOD_MS) {
     delay(1);
@@ -189,18 +180,5 @@ void loop() {
         put16(packet + 8 + 2 * j, static_cast<uint16_t>(quantize(values[j], j < 3 ? 100 : 1000)));
     }
     publish(packet);
-  }
-  if (static_cast<uint32_t>(now - lastHumidity) >= HUMIDITY_PERIOD_MS) {
-    lastHumidity = now;
-    for (uint8_t i = 0; i < HUMIDITY_COUNT; ++i) {
-      sensors_event_t h{}, t{};
-      bool ok = humidityReady[i] && humidity[i].getEvent(&h, &t);
-      header(packet, 3, i, ok, millis());
-      if (ok) {
-        put16(packet + 8, static_cast<uint16_t>(quantize(t.temperature, 100)));
-        put16(packet + 10, static_cast<uint16_t>(lroundf(h.relative_humidity * 100)));
-      }
-      publish(packet);
-    }
   }
 }

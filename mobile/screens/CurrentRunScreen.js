@@ -6,9 +6,11 @@ import { shared } from '../theme';
 import { Button, BackButton, ConnectionPanel, DeviceList, SensorCard } from '../components';
 
 export default function CurrentRunScreen({ navigate, shirt }) {
-  const { mode, readings, now, apiUrl, setApiUrl, collecting, sampleCount, runStartedAt, runEndedAt, saving,
+  const { mode, readings, now, apiUrl, setApiUrl, modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
+    collecting, sampleCount, runStartedAt, runEndedAt, saving,
     startRun, finishRun, discardRun, saveRun, error } = shirt;
   const elapsedS = collecting && runStartedAt ? Math.max(0, Math.floor((now - Date.parse(runStartedAt)) / 1000)) : null;
+  const freshAssessment = assessment && (!collecting || now - Date.parse(assessment.assessedAt) <= 3000);
 
   return <>
     <StatusBar style="dark" />
@@ -26,6 +28,10 @@ export default function CurrentRunScreen({ navigate, shirt }) {
         <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
           keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
           value={apiUrl} onChangeText={setApiUrl} style={shared.input} />
+        <Text style={[shared.axisLabel, { marginTop: 12 }]}>LIVE TCN API URL</Text>
+        <TextInput accessibilityLabel="Live TCN API URL" autoCapitalize="none" autoCorrect={false}
+          keyboardType="url" placeholder="https://your-tcn-service.example.com" placeholderTextColor="#7f9a8c"
+          value={modelApiUrl} onChangeText={setModelApiUrl} style={shared.input} />
         {collecting
           ? <>
             <Text style={shared.heroTitle}>{String(Math.floor(elapsedS / 60)).padStart(2, '0')}:{String(elapsedS % 60).padStart(2, '0')}</Text>
@@ -45,10 +51,23 @@ export default function CurrentRunScreen({ navigate, shirt }) {
             : <Button label="Start run" onPress={startRun} disabled={mode === 'idle'} />}
       </View>
 
+      <View style={shared.hero}>
+        <Text style={shared.axisLabel}>LIVE TCN ASSESSMENT</Text>
+        <Text style={shared.heroTitle}>
+          {freshAssessment?.form_status || (modelInfo?.ready ? 'Waiting for a complete 2.56 s window' : 'TCN unavailable')}
+        </Text>
+        {freshAssessment
+          ? <Text style={shared.muted}>{`Model score ${Math.round(freshAssessment.confidence * 100)}% · ${freshAssessment.model_version}`}</Text>
+          : <Text style={shared.muted}>{modelError || modelInfo?.message || 'Connect all six sensors and configure the TCN service.'}</Text>}
+        {modelInfo?.ready && modelInfo.metrics && <Text style={shared.muted}>
+          {`Held-out accuracy ${Math.round(modelInfo.metrics.accuracy * 100)}% · bad-form recall ${Math.round(modelInfo.metrics.bad_recall * 100)}%`}
+        </Text>}
+      </View>
+
       {!!error && <Text accessibilityRole="alert" style={shared.error}>{error}</Text>}
 
-      {['Flex', 'IMU', 'Environment'].map(group => <View key={group}>
-        <Text style={shared.section}>{group === 'Flex' ? 'Bend signals' : group === 'IMU' ? 'Arm movement' : 'Shirt environment'}</Text>
+      {['Flex', 'IMU'].map(group => <View key={group}>
+        <Text style={shared.section}>{group === 'Flex' ? 'Elbow bend signals' : 'Arm movement'}</Text>
         {SENSORS.filter(s => s.group === group).map(s => <SensorCard key={sensorKey(s)} sensor={s} reading={readings[sensorKey(s)]} now={now} />)}
       </View>)}
     </ScrollView>

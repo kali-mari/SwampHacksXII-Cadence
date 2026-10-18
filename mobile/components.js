@@ -35,7 +35,7 @@ export function ConnectionPanel({ shirt }) {
       : status;
   const sensorSummary = mode === 'demo'
     ? `${simulatedCount} / 9 simulated readings updating · No shirt connected`
-    : `${liveCount} / 9 physical sensors reporting · Four IMUs · three flex · two humidity`;
+    : `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`;
   return <View style={shared.hero}>
     <Text style={shared.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
     <Text accessibilityLiveRegion="polite" style={shared.heroTitle}>{headline}</Text>
@@ -77,10 +77,6 @@ export function SensorCard({ sensor, reading, now }) {
       <Text style={shared.axes}>{usable ? reading.gyroRadps.map(v => fmt(v, 3)).join('   /   ') : '—   /   —   /   —'}</Text>
       <Text style={shared.muted}>X / Y / Z</Text>
     </>}
-    {sensor.type === 3 && <Text style={shared.value}>
-      {usable ? fmt(reading.humidityPct, 1) : '—'}<Text style={shared.unit}> % RH   </Text>
-      {usable ? fmt(reading.temperatureC, 1) : '—'}<Text style={shared.unit}> °C</Text>
-    </Text>}
     {reading && <Text style={shared.timestamp}>Device {reading.deviceMs} ms · received {Math.max(0, Math.floor((now - reading.receivedAt) / 1000))}s ago</Text>}
   </View>;
 }

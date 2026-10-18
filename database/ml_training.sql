@@ -10,13 +10,12 @@ CREATE TABLE IF NOT EXISTS training_samples (
     sample_id BIGSERIAL PRIMARY KEY,
     run_id UUID NOT NULL REFERENCES training_runs(run_id) ON DELETE CASCADE,
     captured_at TIMESTAMPTZ NOT NULL,
-    sensor_type SMALLINT NOT NULL CHECK (sensor_type IN (1, 2, 3)),
+    sensor_type SMALLINT NOT NULL     CHECK (sensor_type IN (1, 2)),
     sensor_id SMALLINT NOT NULL,
     reading JSONB NOT NULL CHECK (jsonb_typeof(reading) = 'object'),
     CHECK (
-        (sensor_type = 1 AND sensor_id BETWEEN 0 AND 2) OR
-        (sensor_type = 2 AND sensor_id BETWEEN 0 AND 3) OR
-        (sensor_type = 3 AND sensor_id BETWEEN 0 AND 1)
+        (sensor_type = 1 AND sensor_id BETWEEN 0 AND 1) OR
+        (sensor_type = 2 AND sensor_id BETWEEN 0 AND 3)
     )
 );
 

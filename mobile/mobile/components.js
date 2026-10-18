@@ -27,11 +27,13 @@ export function BackButton({ onPress }) {
 // The "Find my shirt / Try demo / Disconnect" block, shared by Current Run,
 // Dev Testing, and Calibrate — all three need a live connection before they're useful.
 export function ConnectionPanel({ shirt }) {
-  const { mode, status, liveCount, scan, startDemo, stop } = shirt;
+  const { mode, status, liveCount, simulatedCount, scan, startDemo, stop } = shirt;
   return <View style={shared.hero}>
     <Text style={shared.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
     <Text accessibilityLiveRegion="polite" style={shared.heroTitle}>{status}</Text>
-    <Text style={shared.muted}>{liveCount} / 9 sensors reporting · {mode === 'demo' ? 'No hardware connected' : 'Four IMUs · three flex · two humidity'}</Text>
+    <Text style={shared.muted}>{mode === 'demo'
+      ? `${simulatedCount} / 6 simulated readings updating · No shirt connected`
+      : `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`}</Text>
     <View style={shared.actions}>
       <Button label="Find my shirt" onPress={scan} disabled={['Checking Bluetooth', 'Scanning', 'Connecting'].includes(status)} />
       <Button label="Try demo" secondary onPress={startDemo} />
@@ -69,10 +71,6 @@ export function SensorCard({ sensor, reading, now }) {
       <Text style={shared.axes}>{usable ? reading.gyroRadps.map(v => fmt(v, 3)).join('   /   ') : '—   /   —   /   —'}</Text>
       <Text style={shared.muted}>X / Y / Z</Text>
     </>}
-    {sensor.type === 3 && <Text style={shared.value}>
-      {usable ? fmt(reading.humidityPct, 1) : '—'}<Text style={shared.unit}> % RH   </Text>
-      {usable ? fmt(reading.temperatureC, 1) : '—'}<Text style={shared.unit}> °C</Text>
-    </Text>}
     {reading && <Text style={shared.timestamp}>Device {reading.deviceMs} ms · received {Math.max(0, Math.floor((now - reading.receivedAt) / 1000))}s ago</Text>}
   </View>;
 }

@@ -5,7 +5,7 @@ import { SENSORS, sensorKey } from '../sensors.mjs';
 import { colors, shared } from '../theme';
 import { Button, BackButton, ConnectionPanel, DeviceList, SensorCard } from '../components';
 
-const FLEX = SENSORS.filter(s => s.type === 1); // left elbow, right elbow, spine
+const FLEX = SENSORS.filter(s => s.type === 1);
 const FLAT_OHMS = 25000;     // nominal unbent resistance, see docs/HARDWARE_AND_FIRMWARE.md
 const MAX_BEND_OHMS = 125000; // nominal full-bend resistance
 
@@ -31,7 +31,6 @@ export default function CalibrateScreen({ navigate, shirt }) {
   const ohms = s => reading(s)?.valid ? reading(s).resistanceOhms : undefined;
   const leftElbowDeg = bendDegrees(ohms(FLEX[0]), baseline?.[sensorKey(FLEX[0])]);
   const rightElbowDeg = bendDegrees(ohms(FLEX[1]), baseline?.[sensorKey(FLEX[1])]);
-  const spineDeg = bendDegrees(ohms(FLEX[2]), baseline?.[sensorKey(FLEX[2])]) * 0.3; // subtler lean
 
   function calibrate() {
     const next = {};
@@ -52,13 +51,13 @@ export default function CalibrateScreen({ navigate, shirt }) {
       <DeviceList shirt={shirt} />
 
       <View style={{ alignItems: 'center', marginVertical: 22 }}>
-        <Text style={[shared.axisLabel, { marginBottom: 10 }]}>REAL-TIME MODEL</Text>
+        <Text style={[shared.axisLabel, { marginBottom: 10 }]}>LIVE POSE PREVIEW</Text>
         {/* Placeholder schematic — swap this block for the Blender-exported
             avatar (glTF/GLB) once it's ready. Feed it the same leftElbowDeg /
             rightElbowDeg / spineDeg values (or the raw per-sensor readings
             above them) as its joint-rotation inputs so nothing else here has
             to change. */}
-        <StickFigure leftElbowDeg={leftElbowDeg} rightElbowDeg={rightElbowDeg} spineDeg={spineDeg} />
+        <StickFigure leftElbowDeg={leftElbowDeg} rightElbowDeg={rightElbowDeg} spineDeg={0} />
       </View>
 
       <View style={shared.hero}>

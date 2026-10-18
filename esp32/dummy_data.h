@@ -2,12 +2,12 @@
 #include <math.h>
 #include "protocol.h"
 
-// One sensor per packet; slots 0..2 flex, 3..6 IMU, 7..8 environment.
+// One sensor per packet; slots 0..1 flex, 2..5 IMU.
 // Uses the same units/encoding as real firmware. Header bit 1 marks simulated data.
 inline void makeDummyPacket(uint8_t* packet, uint8_t slot, uint32_t now) {
   const float wave = sinf(now * 0.001f + slot * 0.5f);
-  const uint8_t type = slot < 3 ? 1 : slot < 7 ? 2 : 3;
-  const uint8_t id = slot < 3 ? slot : slot < 7 ? slot - 3 : slot - 7;
+  const uint8_t type = slot < 2 ? 1 : 2;
+  const uint8_t id = slot < 2 ? slot : slot - 2;
   header(packet, type, id, true, now);
   packet[3] |= 2;
   if (type == 1) {
@@ -22,8 +22,5 @@ inline void makeDummyPacket(uint8_t* packet, uint8_t slot, uint32_t now) {
       static_cast<int16_t>(200 * wave), static_cast<int16_t>(400 * wave), 10};
     for (uint8_t j = 0; j < 6; ++j)
       put16(packet + 8 + 2 * j, static_cast<uint16_t>(values[j]));
-  } else {
-    put16(packet + 8, static_cast<uint16_t>((id == 0 ? 3100 : 2300) + 20 * wave));
-    put16(packet + 10, static_cast<uint16_t>((id == 0 ? 6500 : 4500) + 100 * wave));
   }
 }

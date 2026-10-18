@@ -22,12 +22,13 @@ test('IMU signed units and byte offsets', () => {
   assert.deepEqual(result.accelerationMps2, [-9.81, 0, 9.81]);
   assert.deepEqual(result.gyroRadps, [-1.5, 2, 0]);
 });
-test('humidity signed temperature and invalid sensor', () => {
-  const [b, v] = packet(3, 1);
-  v.setInt16(8, -500, true); v.setUint16(10, 6550, true);
-  assert.equal(decodePacket(b).temperatureC, -5);
-  assert.equal(decodePacket(b).humidityPct, 65.5);
-  b[3] = 0; assert.equal(decodePacket(b).temperatureC, undefined);
+test('rejects retired environment sensors', () => {
+  const [b] = packet(3, 1);
+  assert.throws(() => decodePacket(b), /Unknown sensor/);
+  for (const [type, id] of [[1, 2], [2, 4]]) {
+    const [invalid] = packet(type, id);
+    assert.throws(() => decodePacket(invalid), /Unknown sensor/);
+  }
 });
 test('rejects malformed or incompatible messages', () => {
   assert.throws(() => decodePacket(new Uint8Array(19)));
@@ -35,19 +36,15 @@ test('rejects malformed or incompatible messages', () => {
   b[0] = 1; b[2] = 4; assert.throws(() => decodePacket(b));
 });
 
-test('accepts spine flex ID 2 and rejects out-of-range IDs for each type', () => {
-  const [spine, v] = packet(1, 2);
+test('accepts elbow flex IDs and rejects retired sensor IDs', () => {
+  const [elbow, v] = packet(1, 1);
   v.setUint32(12, 45000, true);
-  assert.equal(decodePacket(spine).id, 2);
-  assert.equal(decodePacket(spine).resistanceOhms, 45000);
-  for (const [type, id] of [[1, 3], [2, 4], [3, 2]]) {
-    const [b] = packet(type, id);
-    assert.throws(() => decodePacket(b));
-  }
+  assert.equal(decodePacket(elbow).id, 1);
+  assert.equal(decodePacket(elbow).resistanceOhms, 45000);
 });
 
 test('marks ESP32 dummy packets while preserving valid readings', () => {
-  const [b, v] = packet(1, 2);
+  const [b, v] = packet(1, 1);
   b[3] = 3;
   v.setUint32(12, 40000, true);
   assert.equal(decodePacket(b).simulated, true);

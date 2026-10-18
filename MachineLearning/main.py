@@ -1,120 +1,96 @@
+import json
+import logging
+import math
+from pathlib import Path
+
+import joblib
+import numpy as np
+import torch
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import pandas as pd
-import os
-import joblib
 
-app = FastAPI()
+if __package__:
+    from .tcn_model import PostureTCN
+else:
+    from tcn_model import PostureTCN
 
-# Load the trained model and scaler when the FastAPI server starts up
-MODEL_PATH = "running_model.pkl"
-SCALER_PATH = "scaler.pkl"
-
+ROOT = Path(__file__).resolve().parent
+MODEL_PATH = ROOT / "running_model.pt"
+SCALER_PATH = ROOT / "scaler.pkl"
+INFO_PATH = ROOT / "model_info.json"
+app = FastAPI(title="Posture Check TCN API")
+logger = logging.getLogger(__name__)
 model = None
 scaler = None
+model_info = None
 
-if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH):
-    model = joblib.load(MODEL_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    print("Loaded trained machine learning model and scaler successfully!")
-else:
-    print("Warning: Model or scaler files not found. Run 'train_model.py' first.")
-
-# 1. Schema for logging raw run data to CSV
-class SensorDataPacket(BaseModel):
-    timestamp: int
-    run_id: str
-    label: int  # 0 for Good, 1 for Poor Form
-    imu_accel_xl: float
-    imu_accel_yl: float
-    imu_accel_zl: float
-    imu_accel_xr: float
-    imu_accel_yr: float
-    imu_accel_zr: float
-    flex_sensor_l: float
-    flex_sensor_r: float
-    flex_sensor_spine: float
-    humidity: float
-
-CSV_FILE = "run_training_data.csv"
-
-@app.post("/log-run-data")
-async def log_run_data(data: SensorDataPacket):
-    try:
-        df_new = pd.DataFrame([data.model_dump()])
-        file_exists = os.path.exists(CSV_FILE)
-        df_new.to_csv(CSV_FILE, mode='a', header=not file_exists, index=False)
-        return {"status": "success", "message": "Sensor data appended to CSV!"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+try:
+    if MODEL_PATH.exists() and SCALER_PATH.exists() and INFO_PATH.exists():
+        loaded_info = json.loads(INFO_PATH.read_text(encoding="utf-8"))
+        if loaded_info.get("model_type") != "temporal_convolutional_network":
+            raise ValueError("Saved model is not a trained TCN.")
+        loaded_scaler = joblib.load(SCALER_PATH)
+        loaded_model = PostureTCN(input_channels=len(loaded_info["channel_names"]))
+        state = torch.load(MODEL_PATH, map_location="cpu", weights_only=True)
+        loaded_model.load_state_dict(state)
+        loaded_model.eval()
+        model_info = loaded_info
+        scaler = loaded_scaler
+        model = loaded_model
+        logger.info("Loaded posture TCN %s", model_info["model_version"])
+    else:
+        logger.warning("TigerData-trained TCN artifacts are not available. Train the model first.")
+except (OSError, ValueError, KeyError, EOFError, json.JSONDecodeError, RuntimeError):
+    logger.exception("Could not load TCN model artifacts.")
+    model = None
+    scaler = None
+    model_info = None
 
 
-# 2. Schema for incoming live sensor data for real-time predictions
 class PredictionInput(BaseModel):
-    imu_accel_xl: float
-    imu_accel_yl: float
-    imu_accel_zl: float
-    imu_accel_xr: float
-    imu_accel_yr: float
-    imu_accel_zr: float
-    flex_sensor_l: float
-    flex_sensor_r: float
-    flex_sensor_spine: float
-    humidity: float
+    frames: list[list[float]]
+
+
+@app.get("/model/info")
+def get_model_info():
+    if model is None or scaler is None or model_info is None:
+        return {
+            "ready": False,
+            "status": "not_ready",
+            "message": "TigerData-trained TCN artifacts are not available. Train the model first.",
+        }
+    return {"ready": True, "status": "ready", **model_info}
+
 
 @app.post("/predict")
-async def predict_form(data: PredictionInput):
-    if model is None or scaler is None:
-        raise HTTPException(status_code=500, detail="ML model or scaler is not loaded on the server. Train the model first.")
-    
+def predict_form(data: PredictionInput):
+    if model is None or scaler is None or model_info is None:
+        raise HTTPException(status_code=503, detail="TCN model artifacts are not available. Train the model first.")
+
+    window_size = model_info["window_size"]
+    channel_count = len(model_info["channel_names"])
+    if len(data.frames) != window_size or any(len(frame) != channel_count for frame in data.frames):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Expected {window_size} frames with {channel_count} sensor channels each.",
+        )
+    if not all(math.isfinite(value) for frame in data.frames for value in frame):
+        raise HTTPException(status_code=422, detail="Frame values must be finite numbers.")
+
     try:
-        # Convert incoming data into a DataFrame matching the model's expected features
-        input_data = pd.DataFrame([{
-            "imu_accel_xl1": data.imu_accel_xl1,
-            "imu_accel_yl1": data.imu_accel_yl1,
-            "imu_accel_zl1": data.imu_accel_zl1,
-            "imu_accel_xr1": data.imu_accel_xr1,
-            "imu_accel_yr1": data.imu_accel_yr1,
-            "imu_accel_zr1": data.imu_accel_zr1,
-            "imu_accel_xl2": data.imu_accel_xl2,
-            "imu_accel_yl2": data.imu_accel_yl2,
-            "imu_accel_zl2": data.imu_accel_zl2,
-            "imu_accel_xr2": data.imu_accel_xr2,
-            "imu_accel_yr2": data.imu_accel_yr2,
-            "imu_accel_zr2": data.imu_accel_zr2,
-            "imu_gyro_xl1": data.imu_gyro_xl1,
-            "imu_gyro_yl1": data.imu_gyro_yl1,
-            "imu_gyro_zl1": data.imu_gyro_zl1,
-            "imu_gyro_xr1": data.imu_gyro_xr1,
-            "imu_gyro_yr1": data.imu_gyro_yr1,
-            "imu_gyro_zr1": data.imu_gyro_zr1,
-            "imu_gyro_xl2": data.imu_gyro_xl2,
-            "imu_gyro_yl2": data.imu_gyro_yl2,
-            "imu_gyro_zl2": data.imu_gyro_zl2,
-            "imu_gyro_xr2": data.imu_gyro_xr2,
-            "imu_gyro_yr2": data.imu_gyro_yr2,
-            "imu_gyro_zr2": data.imu_gyro_zr2,
-            "flex_sensor_l": data.flex_sensor_l,
-            "flex_sensor_r": data.flex_sensor_r,
-            "flex_sensor_spine": data.flex_sensor_spine,
-            "Inside humidity": data.humidity,
-            "Outside humidity": data.humidity
-        }])
-        
-        # Scale the features using your saved scaler
-        scaled_features = scaler.transform(input_data)
-        
-        # Predict using your trained Random Forest model
-        prediction = model.predict(scaled_features)[0]
-        prediction_proba = model.predict_proba(scaled_features)[0].tolist()
-        
-        # Map output to human-readable form status
-        form_status = "Poor Form / At-Risk" if prediction == 1 else "Good Form"
-        
+        frames = np.asarray(data.frames, dtype=np.float32)
+        scaled = scaler.transform(frames)
+        tensor = torch.from_numpy(scaled.T.copy()).unsqueeze(0)
+        with torch.no_grad():
+            probability = float(torch.sigmoid(model(tensor))[0].item())
+        prediction = int(probability >= 0.5)
+        confidence = probability if prediction else 1.0 - probability
         return {
-            "prediction": int(prediction),
-            "form_status": form_status,
-            "confidence": round(max(prediction_proba), 2)
+            "prediction": prediction,
+            "form_status": "Poor Form / At-Risk" if prediction else "Good Form",
+            "confidence": round(confidence, 4),
+            "poor_form_probability": round(probability, 4),
+            "model_version": model_info["model_version"],
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except (ValueError, RuntimeError) as error:
+        raise HTTPException(status_code=422, detail=f"Invalid sensor window: {error}") from error

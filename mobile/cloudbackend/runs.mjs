@@ -6,7 +6,7 @@ function averagesFor(row) {
     accelX: num(row.avg_accel_x), accelY: num(row.avg_accel_y), accelZ: num(row.avg_accel_z),
     gyroX: num(row.avg_gyro_x), gyroY: num(row.avg_gyro_y), gyroZ: num(row.avg_gyro_z),
   };
-  return { temperatureC: num(row.avg_temperature_c), humidityPct: num(row.avg_humidity_pct) };
+  return {};
 }
 
 // rows: one row per (run, sensor_type, sensor_id), as produced by the

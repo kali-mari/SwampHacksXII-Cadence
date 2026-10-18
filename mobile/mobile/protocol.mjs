@@ -8,7 +8,7 @@ export function decodePacket(bytes) {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (v.getUint8(0) !== 1) throw new Error('Unsupported protocol version');
   const type = v.getUint8(1), id = v.getUint8(2);
-  if (![1, 2, 3].includes(type) || id >= (type === 1 ? 3 : type === 2 ? 4 : 2))
+  if (![1, 2].includes(type) || id >= (type === 1 ? 2 : 4))
     throw new Error('Unknown sensor');
   const base = { version: 1, type, id, valid: !!(v.getUint8(3) & 1),
     simulated: !!(v.getUint8(3) & 2), deviceMs: v.getUint32(4, true) };
@@ -18,6 +18,5 @@ export function decodePacket(bytes) {
   if (type === 2) return { ...base,
     accelerationMps2: [8, 10, 12].map(i => v.getInt16(i, true) / 100),
     gyroRadps: [14, 16, 18].map(i => v.getInt16(i, true) / 1000) };
-  return { ...base, temperatureC: v.getInt16(8, true) / 100,
-    humidityPct: v.getUint16(10, true) / 100 };
+  throw new Error('Unsupported sensor type');
 }

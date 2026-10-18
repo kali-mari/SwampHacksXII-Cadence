@@ -49,7 +49,7 @@ export default function DevTestingScreen({ navigate, shirt }) {
       {!!error && <Text accessibilityRole="alert" style={shared.error}>{error}</Text>}
 
       <Text style={shared.section}>Value readouts</Text>
-      {['Flex', 'IMU', 'Environment'].map(group => <View key={group}>
+      {['Flex', 'IMU'].map(group => <View key={group}>
         {SENSORS.filter(s => s.group === group).map(s => <SensorCard key={sensorKey(s)} sensor={s} reading={readings[sensorKey(s)]} now={now} />)}
       </View>)}
 

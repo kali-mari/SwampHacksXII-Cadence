@@ -61,12 +61,17 @@ error like "cannot be loaded because running scripts is disabled on this system.
 
 ## Data and limitations
 
-Displays four IMUs, three flex sensors (elbows and spine), and two SHT40s. The
+Displays four IMUs and two elbow flex sensors. The
 20-byte packet contract is documented in ../docs/HARDWARE_AND_FIRMWARE.md.
 BLE UUIDs in protocol.mjs must match esp32/config.h. Notifications are decoded from
 base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The app
 disconnects in background; scan/connect again on return. Flex readings are resistance,
 not calibrated joint angles.
+
+During a Current Run, the app can send a rolling 128-frame (2.56-second) window
+of the six sensors to the TCN service. Set `EXPO_PUBLIC_MODEL_API_URL` to the
+reachable HTTPS inference API before starting Expo. Training and service setup are in
+`../MachineLearning/README.md`.
 
 **Current Run** and **Dev Testing** record valid, non-simulated BLE packets in
 memory. Save a Current Run to upload its samples without a label, or save a Dev
