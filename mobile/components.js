@@ -27,11 +27,15 @@ export function BackButton({ onPress }) {
 // The "Find my shirt / Disconnect" block, shared by Current Run,
 // Dev Testing, and Calibrate — all three need a live connection before they're useful.
 export function ConnectionPanel({ shirt }) {
-  const { mode, status, liveCount, scan, stop } = shirt;
-  const headline = status === 'Connected' && liveCount === 0
-    ? 'Waiting for sensor readings'
-    : status;
-  const sensorSummary = `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`;
+  const { mode, status, liveCount, simulatedCount, scan, startDemo, stop } = shirt;
+  const headline = mode === 'demo'
+    ? 'Demo data is running'
+    : status === 'Connected' && liveCount === 0
+      ? 'Waiting for sensor readings'
+      : status;
+  const sensorSummary = mode === 'demo'
+    ? `${simulatedCount} / 9 simulated readings updating · No shirt connected`
+    : `${liveCount} / 6 sensor channels reporting · Four IMUs · two elbow flex sensors`;
   return <View style={shared.hero}>
     <Text style={shared.eyebrow}>SENSOR CONNECTION</Text>
     <Text accessibilityLiveRegion="polite" style={shared.heroTitle}>{headline}</Text>
@@ -56,14 +60,14 @@ export function DeviceList({ shirt }) {
 }
 
 export function SensorCard({ sensor, reading, now }) {
-  const status = reading?.simulated ? 'Simulated' : readingStatus(reading, now);
+  const status = reading?.simulated ? 'Demo' : readingStatus(reading, now);
   const usable = reading?.valid;
   return <View style={shared.card}>
     <View style={shared.row}><Text style={shared.cardTitle}>{sensor.name}</Text>
       <Text style={{ color: status === 'Live' ? colors.good : colors.warn }}>{status}</Text></View>
     {sensor.type === 1 && <>
-      <Text style={shared.value}>{usable ? fmt(reading.resistanceOhms / 1000, 1) : '—'} <Text style={shared.unit}>kΩ</Text></Text>
-      <Text style={shared.muted}>{usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Waiting for a valid flex reading'}</Text>
+      <Text style={shared.value}>{usable ? fmt(fallback ? reading.angleDegrees : reading.resistanceOhms / 1000, 1) : '—'} <Text style={shared.unit}>{fallback ? '°' : 'kΩ'}</Text></Text>
+      <Text style={shared.muted}>{fallback ? 'Flex unavailable · IMU relative-angle estimate · 0° = straight' : usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Flex unavailable; IMU fallback needs calibrated, working IMUs'}</Text>
     </>}
     {sensor.type === 2 && <>
       <Text style={shared.axisLabel}>ACCELERATION · m/s²</Text>

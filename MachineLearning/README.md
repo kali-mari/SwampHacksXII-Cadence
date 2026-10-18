@@ -13,7 +13,10 @@ after the base schema if it has not already been applied. The `source` column
 distinguishes labeled Dev Testing captures from unlabeled Current Runs.
 Apply [`../database/0003_tcn_sensor_layout.sql`](../database/0003_tcn_sensor_layout.sql)
 to enforce the two-flex/four-IMU layout for new captures; historical samples are
-preserved.
+preserved. Apply
+[`../database/0004_streamed_captures.sql`](../database/0004_streamed_captures.sql)
+to add durable pending runs; the trainer excludes captures until they are
+finalized.
 
 Use the TigerData credentials already configured for the cloud backend in
 `mobile/cloudbackend/.env` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,

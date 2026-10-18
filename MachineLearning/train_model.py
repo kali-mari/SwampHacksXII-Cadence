@@ -60,6 +60,7 @@ FROM training_runs AS r
 JOIN training_samples AS s ON s.run_id = r.run_id
 WHERE r.label IN ('good', 'bad')
   AND r.source = 'dev_testing'
+  AND r.status = 'complete'
   AND s.sensor_type IN (1, 2)
   AND ((s.sensor_type = 1 AND s.sensor_id IN (0, 1))
        OR (s.sensor_type = 2 AND s.sensor_id BETWEEN 0 AND 3))
@@ -107,6 +108,8 @@ def _sample_channels(row):
     if isinstance(reading, str):
         reading = json.loads(reading)
     if not isinstance(reading, dict):
+        return None
+    if reading.get("source") == "imu_fallback":
         return None
     if sensor[0] == 1:
         values = [reading.get("resistanceOhms")]

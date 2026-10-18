@@ -13,10 +13,10 @@ GPIO0/GPIO1 or raw ADC channel numbers. This is the Adafruit ESP32-S3 Feather
 | --- | --- | --- | --- |
 | Left elbow flex | 1 / 0 | A0 = GPIO18 | Own 10k divider |
 | Right elbow flex | 1 / 1 | A1 = GPIO17 | Own 10k divider |
-| Left upper-arm IMU | 2 / 0 | Bus 0: SDA GPIO3, SCL GPIO4 | 0x68; AD0 to GND |
-| Left forearm IMU | 2 / 1 | Bus 0: SDA GPIO3, SCL GPIO4 | 0x69; AD0 to 3V3 |
-| Right upper-arm IMU | 2 / 2 | Bus 1: SDA GPIO5, SCL GPIO6 | 0x68; AD0 to GND |
-| Right forearm IMU | 2 / 3 | Bus 1: SDA GPIO5, SCL GPIO6 | 0x69; AD0 to 3V3 |
+| Left upper-arm IMU | 2 / 0 | Bus 0: SDA GPIO3, SCL GPIO4 | 0x69; AD0 to 3V3 |
+| Left forearm IMU | 2 / 1 | Bus 0: SDA GPIO3, SCL GPIO4 | 0x68; AD0 to GND |
+| Right upper-arm IMU | 2 / 2 | Bus 1: SDA GPIO5, SCL GPIO6 | 0x69; AD0 to 3V3 |
+| Right forearm IMU | 2 / 3 | Bus 1: SDA GPIO5, SCL GPIO6 | 0x68; AD0 to GND |
 
 Power Adafruit MPU6050 breakout VIN pins from 3V3; connect all grounds together.
 Both IMUs on each bus share that bus's SDA/SCL wires. Do not join the buses together.
@@ -223,10 +223,10 @@ These instructions refer to breakouts, not bare sensor ICs.
 
 | Bus | SDA pin | SCL pin | Sensor ID / placement | Address | MPU AD0 |
 | --- | --- | --- | --- | --- | --- |
-| 0 | GPIO3 / SDA | GPIO4 / SCL | IMU 0: left upper arm | 0x68 | GND |
-| 0 | GPIO3 / SDA | GPIO4 / SCL | IMU 1: left forearm | 0x69 | 3V3 |
-| 1 | GPIO5 / D5 | GPIO6 / D6 | IMU 2: right upper arm | 0x68 | GND |
-| 1 | GPIO5 / D5 | GPIO6 / D6 | IMU 3: right forearm | 0x69 | 3V3 |
+| 0 | GPIO3 / SDA | GPIO4 / SCL | IMU 0: left upper arm | 0x69 | 3V3 |
+| 0 | GPIO3 / SDA | GPIO4 / SCL | IMU 1: left forearm | 0x68 | GND |
+| 1 | GPIO5 / D5 | GPIO6 / D6 | IMU 2: right upper arm | 0x69 | 3V3 |
+| 1 | GPIO5 / D5 | GPIO6 / D6 | IMU 3: right forearm | 0x68 | GND |
 
 On each bus, the three SDA leads share that bus's SDA pin, and the three SCL
 leads share that bus's SCL pin. MPU6050 addresses repeat across independent buses,
@@ -356,3 +356,33 @@ simulated. Existing APKs can
 receive the updated JavaScript through Metro without a native rebuild. Serial
 Monitor at 115200 prints whether the ESP32 is connected and sending or waiting.
 Set SEND_DUMMY_DATA=false and upload again to restore real sensor acquisition.
+
+## IMU fallback when an elbow flex reading fails
+
+Reset with both arms straight, sensor axes aligned, and hold still for at least
+2 seconds after startup. Serial prints `Arm 0 IMU fallback calibrated` and
+`Arm 1 IMU fallback calibrated`. Stillness detection cannot verify that the arms
+are straight; the wearer must establish this pose. The estimator averages gyro
+bias during calibration, then integrates each IMU orientation as a quaternion.
+The relative rotation magnitude is the displayed angle (0 degrees at calibration).
+Forearm twist contributes to this estimate, and gyro drift accumulates: this is
+not a calibrated anatomical hinge measurement. Reset in the straight pose to
+recalibrate. Any missing IMU read or sampling gap over 100 ms disables that arm's
+fallback until reset, rather than continuing with lost motion.
+
+A valid flex reading always takes priority. If the divider reading is invalid
+and its arm's IMU estimator is ready, firmware sends a 20-byte version-2 flex
+packet: flag bit 2 marks the fallback; bytes 16–17 contain unsigned little-endian
+centidegrees. Raw ADC and mV remain diagnostics, and resistance bytes are zero.
+Updated apps expose `source: imu_fallback`, `angleDegrees`, and
+`resistanceOhms: null`, displaying “IMU estimate” and degrees. Version-1 packets
+remain unchanged; old apps reject version 2 rather than reading fictitious ohms.
+Reload the updated app JavaScript when flashing this firmware. No native APK
+changes are required.
+
+Runs may save the explicitly tagged angle in JSON, but ML still expects flex
+resistance. Live prediction pauses during fallback and resumes after a full
+fresh window of real sensor readings; training excludes fallback samples.
+Restart/redeploy the updated backend validator before saving fallback runs.
+Intermittent contacts that still produce an in-range voltage cannot be detected
+by the existing divider validity check and will not trigger this fallback.

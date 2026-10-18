@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
-import { buildTcnWindow, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
-
-const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
+import { buildTcnWindow, MAX_RUN_SAMPLES, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
+import { collectorBaseUrl } from '../collectorConfig.mjs';
+import { CloudRunUploader } from '../cloudCapture.mjs';
 
 // Everything that used to live inside the old Dashboard component, minus the
 // "which screen am I" state — App.js owns navigation now, this hook just owns
@@ -18,18 +18,22 @@ export function useShirtConnection() {
   const [devices, setDevices] = useState([]);
   const [readings, setReadings] = useState({});
   const [now, setNow] = useState(Date.now());
-  const [apiUrl, setApiUrl] = useState(process.env.EXPO_PUBLIC_API_URL || '');
-  const [modelApiUrl, setModelApiUrl] = useState(process.env.EXPO_PUBLIC_MODEL_API_URL || '');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';
+  const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
+  const modelApiUrl = process.env.EXPO_PUBLIC_MODEL_API_URL || '';
   const [modelInfo, setModelInfo] = useState(null);
   const [assessment, setAssessment] = useState(null);
   const [modelError, setModelError] = useState('');
   const [collecting, setCollecting] = useState(false);
+  const [startingRun, setStartingRun] = useState(false);
   const [sampleCount, setSampleCount] = useState(0);
+  const [uploadedSampleCount, setUploadedSampleCount] = useState(0);
   const [runStartedAt, setRunStartedAt] = useState(null);
   const [runEndedAt, setRunEndedAt] = useState(null);
   const [saving, setSaving] = useState(false);
   const client = useRef(null), cache = useRef({}), epoch = useRef(0), mounted = useRef(true);
   const captureActive = useRef(false), samples = useRef([]);
+  const cloudUploader = useRef(null), captureSource = useRef(null), startingRunActive = useRef(false);
   const modelSamples = useRef([]);
   const predictionActive = useRef(false), lastPredictionAt = useRef(0);
   const isExpoGo = Constants.executionEnvironment === 'storeClient';
@@ -70,7 +74,9 @@ export function useShirtConnection() {
   useEffect(() => {
     setModelInfo(null);
     setAssessment(null);
-    setModelError(modelApiUrl.trim() ? 'Checking TCN service…' : 'Set the TCN API URL to enable live assessment.');
+    setModelError(modelApiUrl.trim()
+      ? 'Checking live posture assessment…'
+      : 'Live posture assessment is not configured. Sensor capture and uploads can still work.');
     if (!modelApiUrl.trim()) return undefined;
     let active = true;
     fetch(`${modelApiUrl.trim().replace(/\/+$/, '')}/model/info`)
@@ -117,7 +123,7 @@ export function useShirtConnection() {
             typeof body.form_status !== 'string' || typeof body.model_version !== 'string') {
           throw new Error('TCN service returned an invalid assessment.');
         }
-        if (mounted.current) {
+        if (mounted.current && buildTcnWindow(modelSamples.current, Date.now())) {
           setAssessment({...body, assessedAt: new Date().toISOString()});
           setModelError('');
         }
@@ -137,10 +143,20 @@ export function useShirtConnection() {
     const stored = { ...reading, receivedAt };
     cache.current[sensorKey(reading)] = stored;
     if (captureActive.current && reading.valid && !reading.simulated) {
+      if (samples.current.length >= MAX_RUN_SAMPLES) {
+        finishRun();
+        setError(`Reached the maximum of ${MAX_RUN_SAMPLES} samples. Save or discard this run before starting another.`);
+        return;
+      }
       const sample = { ...stored };
       delete sample.receivedAt;
       const timestamped = {...sample, capturedAt: new Date(receivedAt).toISOString()};
       samples.current.push(timestamped);
+      try {
+        cloudUploader.current?.addSample(timestamped);
+      } catch (uploadError) {
+        setError(`Cloud sample upload failed: ${uploadError.message || String(uploadError)}`);
+      }
       modelSamples.current.push(timestamped);
       modelSamples.current = modelSamples.current.filter(
         item => receivedAt - Date.parse(item.capturedAt) <= 5000,
@@ -148,21 +164,57 @@ export function useShirtConnection() {
     }
   }
 
-  function startRun() {
+  async function startRun(source) {
     if (mode !== 'live' || status !== 'Connected') {
       setError('Connect to the shirt over Bluetooth before starting a run.');
       return;
     }
-    samples.current = [];
-    modelSamples.current = [];
-    setSampleCount(0);
-    setRunStartedAt(new Date().toISOString());
-    setRunEndedAt(null);
-    setAssessment(null);
-    lastPredictionAt.current = 0;
-    captureActive.current = true;
-    setCollecting(true);
+    if (startingRunActive.current) return;
+    const baseUrl = collectorBaseUrl(apiUrl);
+    if (!baseUrl) {
+      setError('Cloud capture is not configured for this app build. The HTTPS collector address must be set at build time.');
+      return;
+    }
+    if (!collectorApiKey.trim()) {
+      setError('Cloud capture is not configured for this app build. The collector token is missing from its build configuration.');
+      return;
+    }
+
+    startingRunActive.current = true;
+    setStartingRun(true);
     setError('');
+    const connectionAttempt = epoch.current;
+    try {
+      const startedAt = new Date().toISOString();
+      const uploader = new CloudRunUploader({
+        baseUrl,
+        apiKey: collectorApiKey,
+        onError: message => { if (mounted.current) setError(`Cloud sample upload failed: ${message}`); },
+        onProgress: count => { if (mounted.current) setUploadedSampleCount(count); },
+      });
+      const result = await uploader.start(source, startedAt);
+      if (connectionAttempt !== epoch.current) {
+        await uploader.discard();
+        return;
+      }
+      samples.current = [];
+      modelSamples.current = [];
+      cloudUploader.current = uploader;
+      captureSource.current = source;
+      setSampleCount(0);
+      setUploadedSampleCount(0);
+      setRunStartedAt(result.startedAt || startedAt);
+      setRunEndedAt(null);
+      setAssessment(null);
+      lastPredictionAt.current = 0;
+      captureActive.current = true;
+      setCollecting(true);
+    } catch (startError) {
+      setError(`Could not start cloud capture: ${startError.message || String(startError)}`);
+    } finally {
+      startingRunActive.current = false;
+      setStartingRun(false);
+    }
   }
 
   function finishRun() {
@@ -171,16 +223,29 @@ export function useShirtConnection() {
     setCollecting(false);
     setSampleCount(samples.current.length);
     setRunEndedAt(new Date().toISOString());
+    cloudUploader.current?.finish();
   }
 
-  function discardRun() {
+  function clearRun() {
+    cloudUploader.current = null;
+    captureSource.current = null;
     samples.current = [];
     modelSamples.current = [];
     setSampleCount(0);
+    setUploadedSampleCount(0);
     setRunStartedAt(null);
     setRunEndedAt(null);
     setAssessment(null);
     setError('');
+  }
+
+  async function discardRun() {
+    try {
+      await cloudUploader.current?.discard();
+      clearRun();
+    } catch (discardError) {
+      setError(`Could not discard cloud capture: ${discardError.message || String(discardError)}`);
+    }
   }
 
   // source: 'dev_testing' (Dev Testing screen, manually labeled good/bad) or
@@ -188,12 +253,9 @@ export function useShirtConnection() {
   // infer it; see docs/HARDWARE_AND_FIRMWARE.md and the cloudbackend README
   // for where that inference step plugs in later).
   async function saveRun(source, label = null) {
-    if (!apiUrl.trim()) {
-      setError('Set EXPO_PUBLIC_API_URL to your deployed cloudbackend API URL before saving.');
-      return;
-    }
-    if (!collectorApiKey) {
-      setError('Set EXPO_PUBLIC_COLLECTOR_API_KEY for the developer collector before saving.');
+    const uploader = cloudUploader.current;
+    if (!uploader || captureSource.current !== source) {
+      setError('This run has no active cloud capture. Start a new run while connected to the cloud collector.');
       return;
     }
     const payload = { startedAt: runStartedAt, endedAt: runEndedAt, source, label, samples: samples.current };
@@ -201,14 +263,8 @@ export function useShirtConnection() {
       validateRunPayload(payload);
       setSaving(true);
       setError('');
-      const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${collectorApiKey}` },
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || `Cloud save failed (${response.status}).`);
-      discardRun();
+      const result = await uploader.finalize(runEndedAt, source, label);
+      clearRun();
       setStatus(`Saved ${label ? label + ' ' : ''}run · ${result.sampleCount} samples`);
     } catch (e) {
       setError(e.message || String(e));
@@ -263,9 +319,9 @@ export function useShirtConnection() {
     readingStatus(readings[sensorKey(s)], now) === 'Live').length;
 
   return {
-    mode, status, error, devices, readings, now, apiUrl, setApiUrl,
-    modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
-    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
+    mode, status, error, devices, readings, now, apiUrl, collectorApiKey,
+    modelApiUrl, modelInfo, assessment, modelError,
+    collecting, startingRun, sampleCount, uploadedSampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
     scan, connect, stop, startDemo, startRun, finishRun, discardRun, saveRun, setError,
   };
 }

@@ -1,13 +1,13 @@
 import React from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SENSORS, sensorKey } from '../sensors.mjs';
 import { shared } from '../theme';
 import { Button, BackButton, ConnectionPanel, DeviceList, SensorCard } from '../components';
 
 export default function CurrentRunScreen({ navigate, shirt }) {
-  const { mode, readings, now, modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
-    collecting, sampleCount, runStartedAt, runEndedAt, saving,
+  const { mode, readings, now, modelInfo, assessment, modelError,
+    collecting, startingRun, sampleCount, uploadedSampleCount, runStartedAt, runEndedAt, saving,
     startRun, finishRun, discardRun, saveRun, error } = shirt;
   const elapsedS = collecting && runStartedAt ? Math.max(0, Math.floor((now - Date.parse(runStartedAt)) / 1000)) : null;
   const freshAssessment = assessment && (!collecting || now - Date.parse(assessment.assessedAt) <= 3000);
@@ -24,27 +24,26 @@ export default function CurrentRunScreen({ navigate, shirt }) {
       <DeviceList shirt={shirt} />
 
       <View style={[shared.hero, { marginTop: 18 }]}>
-        <Text style={shared.axisLabel}>LIVE TCN API URL</Text>
-        <TextInput accessibilityLabel="Live TCN API URL" autoCapitalize="none" autoCorrect={false}
-          keyboardType="url" placeholder="https://your-tcn-service.example.com" placeholderTextColor="#7f9a8c"
-          value={modelApiUrl} onChangeText={setModelApiUrl} style={shared.input} />
         {collecting
           ? <>
             <Text style={shared.heroTitle}>{String(Math.floor(elapsedS / 60)).padStart(2, '0')}:{String(elapsedS % 60).padStart(2, '0')}</Text>
             <Text style={shared.muted}>{sampleCount} samples captured so far</Text>
+            <Text style={shared.muted}>{uploadedSampleCount} samples uploaded to the cloud</Text>
             <Button label="Stop run" onPress={finishRun} />
           </>
           : runEndedAt
             ? <>
               <Text style={shared.heroTitle}>Run ready · {sampleCount} samples</Text>
+              <Text style={shared.muted}>{uploadedSampleCount} samples uploaded · Save finalizes the run</Text>
               <View style={shared.actions}>
                 <Button label="Save run" onPress={() => saveRun('user_run')} disabled={saving || sampleCount === 0} />
                 <Button label="Discard" secondary disabled={saving} onPress={discardRun} />
               </View>
-              {saving && <Text style={shared.muted}>Saving run…</Text>}
+              {saving && <Text style={shared.muted}>Syncing remaining samples and saving run…</Text>}
               {sampleCount === 0 && <Text style={shared.notice}>No valid sensor samples were captured. Connect the shirt and try again.</Text>}
             </>
-            : <Button label="Start run" onPress={startRun} disabled={mode === 'idle'} />}
+            : <Button label={startingRun ? 'Connecting to cloud…' : 'Start run'}
+              onPress={() => startRun('user_run')} disabled={mode === 'idle' || startingRun} />}
       </View>
 
       <View style={shared.hero}>
@@ -54,7 +53,7 @@ export default function CurrentRunScreen({ navigate, shirt }) {
         </Text>
         {freshAssessment
           ? <Text style={shared.muted}>{`Model score ${Math.round(freshAssessment.confidence * 100)}% · ${freshAssessment.model_version}`}</Text>
-          : <Text style={shared.muted}>{modelError || modelInfo?.message || 'Connect all six sensors and configure the TCN service.'}</Text>}
+          : <Text style={shared.muted}>{modelError || modelInfo?.message || 'Live posture assessment is not configured; sensor capture can still work.'}</Text>}
         {modelInfo?.ready && modelInfo.metrics && <Text style={shared.muted}>
           {`Held-out accuracy ${Math.round(modelInfo.metrics.accuracy * 100)}% · bad-form recall ${Math.round(modelInfo.metrics.bad_recall * 100)}%`}
         </Text>}

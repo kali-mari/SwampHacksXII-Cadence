@@ -71,20 +71,27 @@ disconnects in background; scan/connect again on return. Flex readings are resis
 not calibrated joint angles.
 
 The **Developer data capture** page records valid, non-simulated BLE packets in
-memory during a run. Finish the run and choose **Save as good** or **Save as bad**
-to upload its label and samples to TigerData. Demo readings are excluded. Configure
-`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COLLECTOR_API_KEY`, and
-`EXPO_PUBLIC_MODEL_API_URL` in `.env` before starting Expo; the model URL points to
-the TCN inference API over HTTPS. Live classifications appear after a complete,
-fresh 128-frame window is available; the displayed model score is not calibrated
-confidence. Use the collector URL and development token
-configured for cloudbackend. The
+memory during a run. Deploy the collector as described in
+[`../../cloudbackend/README.md`](../../cloudbackend/README.md), then set
+`EXPO_PUBLIC_API_URL` to its HTTPS origin and `EXPO_PUBLIC_COLLECTOR_API_KEY` to
+the Render collector key in the Android EAS build environment. The app has no
+backend URL or token entry fields. The **Test backend** button checks the
+build-configured collector; it must not point to the TigerData Console or the
+Expo development server.
+
+Finish a Dev Testing run and choose **Save** with a good/bad label to finalize it
+in TigerData. Valid BLE samples upload in ordered batches during capture; Save
+attaches the label and makes the run available for training. Pending/interrupted
+captures are excluded from training, and Discard removes a pending capture.
+Demo readings are excluded. `EXPO_PUBLIC_MODEL_API_URL` points separately to the
+TCN inference API; it is not needed for data collection. Live classifications appear
+after a complete, fresh 128-frame window is available; the displayed model score
+is not calibrated confidence. The
 TigerData credentials must remain in the backend's environment, never in the mobile
 app. The shared collector token is embedded in the development app, so restrict
 backend access and do not treat it as production authentication. See
-[cloudbackend setup](../cloudbackend/README.md) to
-create the database tables and start/deploy the API. Unsaved in-memory runs are
-lost if the app closes.
+[cloudbackend setup](../../cloudbackend/README.md) to create the database tables and
+deploy the API. Unsaved in-memory runs are lost if the app closes.
 
 ## Checks
 
