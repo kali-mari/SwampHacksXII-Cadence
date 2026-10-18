@@ -8,8 +8,8 @@ constexpr bool SEND_DUMMY_DATA = false;
 constexpr bool ENABLE_I2C_SENSORS = true;
 constexpr uint8_t IMU_COUNT = 4;
 constexpr uint8_t FLEX_COUNT = 2;
-// IDs: left elbow and right elbow.
-constexpr uint8_t FLEX_PINS[FLEX_COUNT] = {13, A1};
+// IDs: 0 left elbow (A0/GPIO18), 1 right elbow (A1/GPIO17).
+constexpr uint8_t FLEX_PINS[FLEX_COUNT] = {A0, A1};
 constexpr bool FLEX_ENABLED[FLEX_COUNT] = {true, true};
 constexpr uint8_t I2C_SDA[2] = {3, 5};
 constexpr uint8_t I2C_SCL[2] = {4, 6};

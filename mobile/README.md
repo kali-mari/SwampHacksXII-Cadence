@@ -61,7 +61,7 @@ error like "cannot be loaded because running scripts is disabled on this system.
 
 ## Data and limitations
 
-Displays four IMUs and two elbow flex sensors. The
+Displays four IMUs and two elbow flex sensors (left A0, right A1). The
 20-byte packet contract is documented in ../docs/HARDWARE_AND_FIRMWARE.md.
 BLE UUIDs in protocol.mjs must match esp32/config.h. Notifications are decoded from
 base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The app

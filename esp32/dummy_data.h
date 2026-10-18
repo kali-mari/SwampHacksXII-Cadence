@@ -2,7 +2,7 @@
 #include <math.h>
 #include "protocol.h"
 
-// One sensor per packet; slots 0..1 flex, 2..5 IMU.
+// One sensor per packet; slots 0..1 elbow flex, 2..5 IMU.
 // Uses the same units/encoding as real firmware. Header bit 1 marks simulated data.
 inline void makeDummyPacket(uint8_t* packet, uint8_t slot, uint32_t now) {
   const float wave = sinf(now * 0.001f + slot * 0.5f);
