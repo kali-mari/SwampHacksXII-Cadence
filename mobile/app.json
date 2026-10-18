@@ -28,7 +28,8 @@
           "bluetoothAlwaysPermission": "Connect to your Cadence shirt to display workout sensor readings.",
           "neverForLocation": true
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "eas": {

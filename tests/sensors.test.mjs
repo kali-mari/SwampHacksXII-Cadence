@@ -1,10 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SENSORS, sensorKey, readingStatus, demoReadings } from '../mobile/sensors.mjs';
-test('all six configured sensors have unique keys and demo readings', () => {
+import { SENSORS, sensorKey, readingStatus } from '../mobile/sensors.mjs';
+test('all six configured sensors have unique keys', () => {
   assert.equal(new Set(SENSORS.map(sensorKey)).size, 6);
-  assert.deepEqual(demoReadings(1000).map(sensorKey), SENSORS.map(sensorKey));
-  for (const r of demoReadings(1000)) assert.equal(r.valid, true);
 });
 test('staleness rejects invalid readings and marks old readings stale', () => {
   assert.equal(readingStatus(null, 2000), 'Waiting');

@@ -24,25 +24,20 @@ export function BackButton({ onPress }) {
   return <View style={shared.backRow}><Button label="← Home" secondary onPress={onPress} /></View>;
 }
 
-// The "Find my shirt / Try demo / Disconnect" block, shared by Current Run,
+// The "Find my shirt / Disconnect" block, shared by Current Run,
 // Dev Testing, and Calibrate — all three need a live connection before they're useful.
 export function ConnectionPanel({ shirt }) {
-  const { mode, status, liveCount, simulatedCount, scan, startDemo, stop } = shirt;
-  const headline = mode === 'demo'
-    ? 'Demo data is running'
-    : status === 'Connected' && liveCount === 0
-      ? 'Waiting for sensor readings'
-      : status;
-  const sensorSummary = mode === 'demo'
-    ? `${simulatedCount} / 9 simulated readings updating · No shirt connected`
-    : `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`;
+  const { mode, status, liveCount, scan, stop } = shirt;
+  const headline = status === 'Connected' && liveCount === 0
+    ? 'Waiting for sensor readings'
+    : status;
+  const sensorSummary = `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`;
   return <View style={shared.hero}>
-    <Text style={shared.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
+    <Text style={shared.eyebrow}>SENSOR CONNECTION</Text>
     <Text accessibilityLiveRegion="polite" style={shared.heroTitle}>{headline}</Text>
     <Text style={shared.muted}>{sensorSummary}</Text>
     <View style={shared.actions}>
       <Button label="Find my shirt" onPress={scan} disabled={['Checking Bluetooth', 'Scanning', 'Connecting'].includes(status)} />
-      <Button label="Try demo" secondary onPress={startDemo} />
     </View>
     {mode !== 'idle' && <Button label="Disconnect / stop" secondary onPress={stop} />}
   </View>;
@@ -61,11 +56,11 @@ export function DeviceList({ shirt }) {
 }
 
 export function SensorCard({ sensor, reading, now }) {
-  const status = reading?.simulated ? 'Demo' : readingStatus(reading, now);
+  const status = reading?.simulated ? 'Simulated' : readingStatus(reading, now);
   const usable = reading?.valid;
   return <View style={shared.card}>
     <View style={shared.row}><Text style={shared.cardTitle}>{sensor.name}</Text>
-      <Text style={{ color: status === 'Live' ? colors.good : colors.warn }}>{status}{reading?.simulated ? ' · Simulated' : ''}</Text></View>
+      <Text style={{ color: status === 'Live' ? colors.good : colors.warn }}>{status}</Text></View>
     {sensor.type === 1 && <>
       <Text style={shared.value}>{usable ? fmt(reading.resistanceOhms / 1000, 1) : '—'} <Text style={shared.unit}>kΩ</Text></Text>
       <Text style={shared.muted}>{usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Waiting for a valid flex reading'}</Text>

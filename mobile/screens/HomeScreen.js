@@ -10,19 +10,16 @@ const destinations = [
 ];
 
 export default function HomeScreen({ navigate, shirt }) {
-  const demoMode = shirt.mode === 'demo';
   const connected = shirt.mode === 'live' && shirt.status === 'Connected' && shirt.liveCount > 0;
   const linkReady = shirt.mode === 'live' && shirt.status === 'Connected';
-  const sensorTitle = demoMode ? 'Demo mode' : connected ? 'Shirt connected' : linkReady ? 'Bluetooth connected' : 'Shirt not connected';
-  const sensorDetail = demoMode
-    ? 'Simulated readings only · no shirt connected'
-    : connected
-      ? `${shirt.liveCount} of 9 sensors reporting`
-      : linkReady
-        ? 'Waiting for live sensor readings'
-        : shirt.mode === 'live'
-          ? `Bluetooth${shirt.status}`
-          : 'Connect your shirt';
+  const sensorTitle = connected ? 'Shirt connected' : linkReady ? 'Bluetooth connected' : 'Shirt not connected';
+  const sensorDetail = connected
+    ? `${shirt.liveCount} of 6 sensors reporting`
+    : linkReady
+      ? 'Waiting for live sensor readings'
+      : shirt.mode === 'live'
+        ? `Bluetooth${shirt.status}`
+        : 'Connect your shirt';
   return <>
     <StatusBar style="dark" backgroundColor={colors.bg} />
     <ScrollView contentContainerStyle={styles.content}>
@@ -39,7 +36,7 @@ export default function HomeScreen({ navigate, shirt }) {
         </Pressable>
       </View>
 
-      <View style={styles.sensorStatus}><View style={[styles.statusDot, connected && styles.connectedDot, demoMode && styles.demoDot]}/><View style={styles.statusCopy}><Text style={styles.statusTitle}>{sensorTitle}</Text><Text style={styles.statusDetail}>{sensorDetail}</Text></View><Text style={styles.statusArrow}>⌁</Text></View>
+      <View style={styles.sensorStatus}><View style={[styles.statusDot, connected && styles.connectedDot]}/><View style={styles.statusCopy}><Text style={styles.statusTitle}>{sensorTitle}</Text><Text style={styles.statusDetail}>{sensorDetail}</Text></View><Text style={styles.statusArrow}>⌁</Text></View>
 
       <View style={styles.sectionHeader}><View><Text style={shared.eyebrow}>YOUR TRAINING SPACE</Text><Text style={styles.sectionTitle}>Make it yours</Text></View></View>
       {destinations.map((item, index) => <Pressable key={item.page} accessibilityRole="button" onPress={() => navigate(item.page)} style={({ pressed }) => [styles.destination, pressed && { opacity: 0.72 }]}>
@@ -72,7 +69,6 @@ const styles = StyleSheet.create({
   sensorStatus: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.panelAlt, borderRadius: 17, paddingHorizontal: 16, paddingVertical: 14, marginTop: 14 },
   statusDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#bca697' },
   connectedDot: { backgroundColor: '#758c68' },
-  demoDot: { backgroundColor: '#c48958' },
   statusCopy: { flex: 1 },
   statusTitle: { color: colors.text, fontSize: 12, fontWeight: '700' },
   statusDetail: { color: colors.muted, fontSize: 10, marginTop: 4 },

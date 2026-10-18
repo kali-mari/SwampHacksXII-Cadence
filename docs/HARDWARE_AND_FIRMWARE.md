@@ -75,7 +75,8 @@ Install the Android EAS development APK (see ../mobile/README.md), load the curr
 JavaScript from `npm start`, then Find my shirt -> PostureShirt -> Connect. Accept
 Nearby devices permissions. Close other BLE inspectors. Updating this sensor layout
 only requires a JavaScript reload of an existing compatible APK, plus new ESP32 firmware.
-Do not choose Try demo when validating real sensors. The dashboard expects six sensors.
+The phone app does not generate simulated data; it expects six shirt sensor
+packets and marks ESP32 dummy packets as simulated.
 
 Service: `7f100001-1b15-4f0d-8c5b-5c794f726b00`.
 Read/notify characteristic: `7f100002-1b15-4f0d-8c5b-5c794f726b00`.
@@ -98,12 +99,38 @@ The app labels invalid or stale readings. Notifications are not replayed if lost
 use timestamps to align recordings and reject incomplete windows for future ML.
 The prototype does not implement BLE bonding/authentication or persistent recording.
 
+## Calibrate screen 3D pose preview
+
+The mobile Calibrate screen uses an optimized `assets/TorsoManquine.glb` derived
+from the supplied model. Its skinned geometry and Mixamo rig are retained; unused
+animation clips and embedded texture maps are removed and replaced by a solid
+material so the native GLB loader can load the bundled model efficiently. It maps the upper-arm
+IMUs (type 2 IDs 0 and 2) to the Mixamo `mixamorig1LeftArm` and
+`mixamorig1RightArm` bones, and the
+forearm IMUs (type 2 IDs 1 and 3) plus elbow flex sensors (type 1 IDs 0 and 1)
+to the forearm/elbow joints. The preview mirrors the right sensor X/Z axes into
+the model coordinate frame to match the shirt-placement diagram. The display
+starts with upper arms at the sides and elbows bent about 90 degrees, forearms
+angled forward. Stand in that pose and capture a new neutral pose before testing
+movement. Valid BLE packets are timestamped by the app and passed directly to
+the preview. Bluetooth requires the Android development build; the phone app
+does not generate synthetic sensor readings.
+
+The MPU6050 preview uses relative gravity direction for approximate segment
+orientation, so it cannot determine yaw and can be affected by acceleration
+while moving. Elbow resistance is converted to an approximate 0–110 degree hinge
+angle relative to the captured neutral resistance. Only fresh valid readings
+drive joints; stale joints ease to the rig's neutral pose. The GLB contains a
+full-body mesh, but the preview camera frames the upper body. The spine remains
+static: this sensor layout has no back-flex or torso IMU, so it cannot measure
+trunk bending.
+
 ## Optional dummy test
 
 Set SEND_DUMMY_DATA=true and upload to skip physical sensors. One simulated packet
 is sent every 20 ms, cycling through the six configured sensors (about 8.3 Hz each).
-The app marks ESP32-generated data as dummy. Set the flag false and re-upload before
-collecting real training data. Phone-only Try demo also uses exactly six sensors.
+The app marks ESP32-generated data as simulated. Set the flag false and re-upload before
+collecting real training data. The phone app itself does not generate simulated readings.
 
 ## Form processing
 
@@ -312,18 +339,20 @@ References: supplied Spectra Symbol flex sheet and Adafruit MPU6050 guide;
 [Arduino ADC API](https://docs.espressif.com/projects/arduino-esp32/en/latest/api/adc.html),
 [Espressif BLE notify example](https://github.com/espressif/arduino-esp32/blob/master/libraries/BLE/examples/Notify/Notify.ino).
 
-## Send dummy readings from the ESP32 over real Bluetooth
+## Optional ESP32 dummy-reading test
 
-`SEND_DUMMY_DATA` in esp32/config.h is currently **true** for connection testing.
-Upload the firmware with PlatformIO. No physical sensors need to be connected.
+`SEND_DUMMY_DATA` in esp32/config.h is currently **false**, so the firmware
+reads the physical sensors. Set it to true only for a hardware/Bluetooth bench
+test, then upload with PlatformIO. No physical sensors need to be connected for
+that test.
 The ESP32 advertises as PostureShirt with the same service and characteristic UUIDs.
 It sends one 20-byte notification every 20 ms, cycling through six sensors.
 Values change smoothly: elbow resistance and acceleration/gyro axes. Header flag bit 1
 marks these readings as simulated; flag bit 0 still means valid.
 
 In the installed Android development app, use **Find my shirt -> Connect**.
-Do **not** select Try demo: that generates readings on the phone and does not test
-Bluetooth. The updated app displays an ESP32 dummy-mode notice. Existing APKs can
+The app has no phone-generated demo feed; it labels ESP32 dummy packets as
+simulated. Existing APKs can
 receive the updated JavaScript through Metro without a native rebuild. Serial
 Monitor at 115200 prints whether the ESP32 is connected and sending or waiting.
 Set SEND_DUMMY_DATA=false and upload again to restore real sensor acquisition.

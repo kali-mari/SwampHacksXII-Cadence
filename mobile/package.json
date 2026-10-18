@@ -8,20 +8,23 @@
     "start:device": "expo start --dev-client",
     "ios": "expo run:ios",
     "android": "expo run:android",
-    "test": "node --test ../tests/protocol.test.mjs ../tests/sensors.test.mjs ../tests/training.test.mjs ../tests/runs.test.mjs",
-    "start:demo": "expo start --go",
+    "test": "node --test ../tests/protocol.test.mjs ../tests/sensors.test.mjs ../tests/training.test.mjs ../tests/runs.test.mjs ../tests/pose.test.mjs",
     "build:android": "npx eas-cli@latest build --platform android --profile development"
   },
   "dependencies": {
     "buffer": "^6.0.3",
     "expo": "57",
+    "expo-asset": "~57.0.20",
     "expo-constants": "~57.0.22",
     "expo-dev-client": "~57.0.20",
+    "expo-file-system": "~57.0.7",
+    "expo-gl": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-ble-plx": "3.5.1",
-    "react-native-safe-area-context": "~5.7.0"
+    "react-native-safe-area-context": "~5.7.0",
+    "three": "^0.145.0"
   },
   "engines": {
     "node": "^22.13.0 || ^24.3.0 || >=26.0.0"

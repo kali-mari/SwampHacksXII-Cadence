@@ -6,7 +6,7 @@ kawi kawista ethan ander
 ## Android Bluetooth app
 
 The Expo app lives in `mobile/`. See [mobile setup](mobile/README.md) for Android EAS
-development builds and Expo Go demo mode. With Node 24 LTS,
+development builds and live Bluetooth sensor intake. With Node 24 LTS,
 run `cd mobile`, `npm install`, then `npm start`.
 
 ## Current hardware

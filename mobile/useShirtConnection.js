@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import Constants from 'expo-constants';
-import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
+import { SENSORS, sensorKey, readingStatus } from './sensors.mjs';
 import { buildTcnWindow, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
 
 const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
@@ -55,17 +55,6 @@ export function useShirtConnection() {
       client.current?.destroy().catch(() => {});
     };
   }, []);
-
-  useEffect(() => {
-    if (mode !== 'demo') return;
-    const start = Date.now();
-    const tick = () => {
-      for (const r of demoReadings(Date.now() - start))
-        cache.current[sensorKey(r)] = { ...r, receivedAt: Date.now() };
-    };
-    tick(); const timer = setInterval(tick, 200);
-    return () => clearInterval(timer);
-  }, [mode]);
 
   useEffect(() => {
     setModelInfo(null);
@@ -226,12 +215,8 @@ export function useShirtConnection() {
     reset();
   }
 
-  async function startDemo() {
-    await stop(); setMode('demo'); setStatus('Demo running');
-  }
-
   async function scan() {
-    if (isExpoGo) { setError('Bluetooth needs a development build. Demo mode works in Expo Go. Install the Android EAS development APK, then open this project in Posture Check.'); return; }
+    if (isExpoGo) { setError('Live Bluetooth sensor data requires the Android EAS development build. Install and open this project in Posture Check to connect the shirt.'); return; }
     await stop();
     setMode('live');
     const attempt = ++epoch.current;
@@ -264,15 +249,10 @@ export function useShirtConnection() {
     const reading = readings[sensorKey(s)];
     return !reading?.simulated && readingStatus(reading, now) === 'Live';
   }).length;
-  const simulatedCount = SENSORS.filter(s => {
-    const reading = readings[sensorKey(s)];
-    return reading?.simulated && readingStatus(reading, now) === 'Live';
-  }).length;
-
   return {
     mode, status, error, devices, readings, now, apiUrl, setApiUrl,
     modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
-    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
-    scan, connect, stop, startDemo, startRun, finishRun, discardRun, saveRun, setError,
+    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount,
+    scan, connect, stop, startRun, finishRun, discardRun, saveRun, setError,
   };
 }
