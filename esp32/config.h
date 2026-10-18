@@ -14,7 +14,8 @@ constexpr bool FLEX_ENABLED[FLEX_COUNT] = {true, true};
 constexpr uint8_t I2C_SDA[2] = {3, 5};
 constexpr uint8_t I2C_SCL[2] = {4, 6};
 constexpr uint8_t IMU_BUS[IMU_COUNT] = {0, 0, 1, 1};
-constexpr uint8_t IMU_ADDRESS[IMU_COUNT] = {0x68, 0x69, 0x68, 0x69};
+// Upper arms: AD0 to 3V3 (0x69); forearms: AD0 to GND (0x68).
+constexpr uint8_t IMU_ADDRESS[IMU_COUNT] = {0x69, 0x68, 0x69, 0x68};
 constexpr float DIVIDER_SUPPLY_MV = 3300.0f;
 constexpr float FIXED_RESISTOR_OHMS = 10000.0f;
 constexpr uint32_t SAMPLE_PERIOD_MS = 20;  // target 50 Hz, not a hard real-time guarantee
