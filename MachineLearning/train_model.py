@@ -1,9 +1,9 @@
 import pandas as pd
 import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.preprocessing import StandardScaler
+from xgboost import XGBClassifier  # Import XGBoost
 
 # 1. Load your collected run dataset from CSV
 CSV_FILE = "run_training_data.csv"
@@ -16,7 +16,6 @@ except FileNotFoundError:
     exit()
 
 # 2. Separate your Features (X) and your Target Label (y)
-# We drop non-feature metadata columns like 'run_id' and 'timestamp', along with the 'label' column
 X = df.drop(columns=["label", "run_id", "timestamp"])
 y = df["label"]  # 0 for Good Form, 1 for Poor Form
 
@@ -25,14 +24,23 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# 4. Scale your features so sensors with larger numeric ranges don't dominate the model
+# 4. Scale your features
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# 5. Train the Random Forest Classifier
-print("Training the Random Forest model...")
-model = RandomForestClassifier(n_estimators=100, random_state=42)
+# 5. Train the XGBoost Classifier
+# 5. Train the XGBoost Classifier with feature subsampling
+print("Training the XGBoost model with balanced feature constraints...")
+model = XGBClassifier(
+    n_estimators=100,
+    learning_rate=0.1,
+    max_depth=4,
+    colsample_bytree=0.6,  # Forces each tree to only look at a random 60% of sensors
+    subsample=0.8,         # Uses 80% of the rows per tree to add healthy randomness
+    random_state=42,
+    eval_metric="logloss"
+)
 model.fit(X_train_scaled, y_train)
 
 # 6. Evaluate the model on unseen test data
@@ -45,14 +53,14 @@ print(confusion_matrix(y_test, y_pred))
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
 
-# Optional: Print out which sensors mattered the most to the model
+# Print out feature importances
 importances = model.feature_importances_
 feature_names = X.columns
 print("\nFeature Importances:")
 for name, score in zip(feature_names, importances):
     print(f" - {name}: {score:.4f}")
 
-# 7. Save the trained model and scaler for future use
+# 7. Save the trained model and scaler
 joblib.dump(model, "running_model.pkl")
 joblib.dump(scaler, "scaler.pkl")
 print("\nModel and scaler saved successfully as 'running_model.pkl' and 'scaler.pkl'!")

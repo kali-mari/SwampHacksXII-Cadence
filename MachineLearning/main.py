@@ -70,16 +70,35 @@ async def predict_form(data: PredictionInput):
     try:
         # Convert incoming data into a DataFrame matching the model's expected features
         input_data = pd.DataFrame([{
-            "imu_accel_xl": data.imu_accel_xl,
-            "imu_accel_yl": data.imu_accel_yl,
-            "imu_accel_zl": data.imu_accel_zl,
-            "imu_accel_xr": data.imu_accel_xr,
-            "imu_accel_yr": data.imu_accel_yr,
-            "imu_accel_zr": data.imu_accel_zr,
+            "imu_accel_xl1": data.imu_accel_xl1,
+            "imu_accel_yl1": data.imu_accel_yl1,
+            "imu_accel_zl1": data.imu_accel_zl1,
+            "imu_accel_xr1": data.imu_accel_xr1,
+            "imu_accel_yr1": data.imu_accel_yr1,
+            "imu_accel_zr1": data.imu_accel_zr1,
+            "imu_accel_xl2": data.imu_accel_xl2,
+            "imu_accel_yl2": data.imu_accel_yl2,
+            "imu_accel_zl2": data.imu_accel_zl2,
+            "imu_accel_xr2": data.imu_accel_xr2,
+            "imu_accel_yr2": data.imu_accel_yr2,
+            "imu_accel_zr2": data.imu_accel_zr2,
+            "imu_gyro_xl1": data.imu_gyro_xl1,
+            "imu_gyro_yl1": data.imu_gyro_yl1,
+            "imu_gyro_zl1": data.imu_gyro_zl1,
+            "imu_gyro_xr1": data.imu_gyro_xr1,
+            "imu_gyro_yr1": data.imu_gyro_yr1,
+            "imu_gyro_zr1": data.imu_gyro_zr1,
+            "imu_gyro_xl2": data.imu_gyro_xl2,
+            "imu_gyro_yl2": data.imu_gyro_yl2,
+            "imu_gyro_zl2": data.imu_gyro_zl2,
+            "imu_gyro_xr2": data.imu_gyro_xr2,
+            "imu_gyro_yr2": data.imu_gyro_yr2,
+            "imu_gyro_zr2": data.imu_gyro_zr2,
             "flex_sensor_l": data.flex_sensor_l,
             "flex_sensor_r": data.flex_sensor_r,
             "flex_sensor_spine": data.flex_sensor_spine,
-            "humidity": data.humidity
+            "Inside humidity": data.humidity,
+            "Outside humidity": data.humidity
         }])
         
         # Scale the features using your saved scaler
