@@ -18,7 +18,7 @@ export function readingStatus(reading, now) {
 export function demoReadings(t) {
   return SENSORS.map(s => {
     const wave = Math.sin(t / 1200 + s.id * .5);
-    const base = {...s, valid: true, deviceMs: t >>> 0};
+    const base = {...s, valid: true, simulated: true, deviceMs: t >>> 0};
     if (s.type === 1) {
       const resistanceOhms = Math.round(40000 + wave * 15000);
       return {...base, resistanceOhms, millivolts: Math.round(3300 * 10000 / (10000 + resistanceOhms)), raw: 1000};

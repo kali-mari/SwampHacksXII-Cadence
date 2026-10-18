@@ -1,0 +1,12 @@
+{
+  "name": "posture-check-cloudbackend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  }
+}

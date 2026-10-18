@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Posture Check",
+    "slug": "posture-check",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "platforms": ["android"],
+    "android": {
+      "package": "com.swamphacks.posturecheck",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings.",
+          "neverForLocation": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "71696cea-0f0e-4b0a-abec-faeb8ba89b38"
+      }
+    }
+  }
+}

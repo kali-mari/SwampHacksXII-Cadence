@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "Posture Check",
+    "name": "Cadence",
     "slug": "posture-check",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.swamphacks.posturecheck",
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "Connect to your PostureShirt to display workout sensor readings."
+        "NSBluetoothAlwaysUsageDescription": "Connect to your Cadence shirt to display workout sensor readings."
       }
     },
     "android": {
@@ -25,7 +25,7 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "bluetoothAlwaysPermission": "Connect to your PostureShirt to display workout sensor readings.",
+          "bluetoothAlwaysPermission": "Connect to your Cadence shirt to display workout sensor readings.",
           "neverForLocation": true
         }
       ]
