@@ -117,7 +117,7 @@ export function useShirtConnection() {
             typeof body.form_status !== 'string' || typeof body.model_version !== 'string') {
           throw new Error('TCN service returned an invalid assessment.');
         }
-        if (mounted.current) {
+        if (mounted.current && buildTcnWindow(modelSamples.current, Date.now())) {
           setAssessment({...body, assessedAt: new Date().toISOString()});
           setModelError('');
         }
@@ -141,7 +141,13 @@ export function useShirtConnection() {
       delete sample.receivedAt;
       const timestamped = {...sample, capturedAt: new Date(receivedAt).toISOString()};
       samples.current.push(timestamped);
-      modelSamples.current.push(timestamped);
+      if (reading.source === 'imu_fallback') {
+        modelSamples.current = [];
+        setAssessment(null);
+        setModelError('ML paused: flex unavailable. IMU angle estimates cannot replace resistance inputs.');
+      } else {
+        modelSamples.current.push(timestamped);
+      }
       modelSamples.current = modelSamples.current.filter(
         item => receivedAt - Date.parse(item.capturedAt) <= 5000,
       );

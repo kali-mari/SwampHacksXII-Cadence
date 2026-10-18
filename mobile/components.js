@@ -35,7 +35,7 @@ export function ConnectionPanel({ shirt }) {
       : status;
   const sensorSummary = mode === 'demo'
     ? `${simulatedCount} / 9 simulated readings updating · No shirt connected`
-    : `${liveCount} / 6 physical sensors reporting · Four IMUs · two elbow flex sensors`;
+    : `${liveCount} / 6 sensor channels reporting · Four IMUs · two elbow flex sensors`;
   return <View style={shared.hero}>
     <Text style={shared.eyebrow}>{mode === 'demo' ? 'SIMULATED DATA' : 'SENSOR CONNECTION'}</Text>
     <Text accessibilityLiveRegion="polite" style={shared.heroTitle}>{headline}</Text>
@@ -61,14 +61,16 @@ export function DeviceList({ shirt }) {
 }
 
 export function SensorCard({ sensor, reading, now }) {
-  const status = reading?.simulated ? 'Demo' : readingStatus(reading, now);
+  const baseStatus = readingStatus(reading, now);
+  const fallback = reading?.source === 'imu_fallback';
+  const status = reading?.simulated ? 'Demo' : fallback && baseStatus === 'Live' ? 'IMU estimate' : baseStatus;
   const usable = reading?.valid;
   return <View style={shared.card}>
     <View style={shared.row}><Text style={shared.cardTitle}>{sensor.name}</Text>
       <Text style={{ color: status === 'Live' ? colors.good : colors.warn }}>{status}{reading?.simulated ? ' · Simulated' : ''}</Text></View>
     {sensor.type === 1 && <>
-      <Text style={shared.value}>{usable ? fmt(reading.resistanceOhms / 1000, 1) : '—'} <Text style={shared.unit}>kΩ</Text></Text>
-      <Text style={shared.muted}>{usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Waiting for a valid flex reading'}</Text>
+      <Text style={shared.value}>{usable ? fmt(fallback ? reading.angleDegrees : reading.resistanceOhms / 1000, 1) : '—'} <Text style={shared.unit}>{fallback ? '°' : 'kΩ'}</Text></Text>
+      <Text style={shared.muted}>{fallback ? 'Flex unavailable · IMU relative-angle estimate · 0° = straight' : usable ? `${reading.millivolts} mV · ADC ${reading.raw}` : 'Flex unavailable; IMU fallback needs calibrated, working IMUs'}</Text>
     </>}
     {sensor.type === 2 && <>
       <Text style={shared.axisLabel}>ACCELERATION · m/s²</Text>

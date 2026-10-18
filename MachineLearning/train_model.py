@@ -108,6 +108,8 @@ def _sample_channels(row):
         reading = json.loads(reading)
     if not isinstance(reading, dict):
         return None
+    if reading.get("source") == "imu_fallback":
+        return None
     if sensor[0] == 1:
         values = [reading.get("resistanceOhms")]
     else:

@@ -46,6 +46,12 @@ export function validateRunPayload(payload) {
     if (sample.valid !== true || sample.simulated !== false || !isTimestamp(sample.capturedAt))
       throw new Error('Only valid, non-simulated sensor samples can be saved.');
 
+    if (sample.source === 'imu_fallback') {
+      if (sample.type !== 1 || sample.resistanceOhms !== null ||
+          !Number.isFinite(sample.angleDegrees) || sample.angleDegrees < 0 || sample.angleDegrees > 180)
+        throw new Error('Invalid IMU fallback angle.');
+      continue;
+    }
     const values = sample.type === 1
       ? [sample.raw, sample.millivolts, sample.resistanceOhms]
       : sample.type === 2 && Array.isArray(sample.accelerationMps2) && sample.accelerationMps2.length === 3
@@ -59,6 +65,7 @@ export function validateRunPayload(payload) {
 }
 
 function featureValues(sample) {
+  if (sample.source === 'imu_fallback') return null;
   if (sample.type === 1 && sample.id <= 1) return [sample.resistanceOhms];
   if (sample.type === 2 && sample.id <= 3 &&
       Array.isArray(sample.accelerationMps2) && sample.accelerationMps2.length === 3 &&

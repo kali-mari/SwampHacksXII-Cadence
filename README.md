@@ -1,4 +1,4 @@
-# SwampHacksXII-Posture-Check
+# SwampHacksXII-Caedence
 SwampHacks XII 36-hour hackathon project
 
 kawi kawista ethan ander
@@ -17,3 +17,7 @@ IMU bus 0 uses GPIO3/GPIO4; bus 1 uses GPIO5/GPIO6. On each bus, set one IMU's
 AD0 low (0x68) and the other's high (0x69). See [wiring and initialization](docs/HARDWARE_AND_FIRMWARE.md).
 Build/upload from the repository root with PlatformIO, then reload the Android
 app's JavaScript from Metro. Its dashboard expects six sensors.
+
+
+
+zzzz

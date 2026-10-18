@@ -11,6 +11,9 @@
 #include "flex_sensor.h"
 #include "protocol.h"
 #include "dummy_data.h"
+#include "elbow_estimator.h"
+
+ElbowEstimator elbows[2];
 
 FlexSensor flex[FLEX_COUNT] = {FlexSensor(FLEX_PINS[0]), FlexSensor(FLEX_PINS[1])};
 TwoWire secondBus(1);
@@ -102,7 +105,7 @@ void setup() {
     for (uint8_t i = 0; i < IMU_COUNT; ++i) {
       imuReady[i] = busReady[IMU_BUS[i]] &&
           imus[i].begin(IMU_ADDRESS[i], buses[IMU_BUS[i]]);
-      if (imuReady[i]) {
+      if (ENABLE_I2C_SENSORS && imuReady[i]) {
         imus[i].setAccelerometerRange(MPU6050_RANGE_8_G);
         imus[i].setGyroRange(MPU6050_RANGE_500_DEG);
         imus[i].setFilterBandwidth(MPU6050_BAND_21_HZ);
@@ -110,6 +113,7 @@ void setup() {
       Serial.printf("IMU %u bus %u address 0x%02X: %s\n", i, IMU_BUS[i], IMU_ADDRESS[i], imuReady[i] ? "OK" : "MISSING - check wiring/AD0, then reset");
     }
   }
+  Serial.println("Hold arms STRAIGHT and STILL for 2 seconds to calibrate IMU fallback. Reset to recalibrate.");
   Serial.println("Starting BLE as PostureShirt...");
   BLEDevice::init("PostureShirt");
   auto* server = BLEDevice::createServer();
@@ -160,30 +164,23 @@ void loop() {
   uint8_t packet[20];
   const bool logFlex = static_cast<uint32_t>(now - lastLog) >= 200;
   if (logFlex) lastLog = now;
-  for (uint8_t i = 0; i < FLEX_COUNT; ++i) {
-    if (!FLEX_ENABLED[i]) continue;
-    auto r = flex[i].read();
-    header(packet, 1, i, isfinite(r.resistanceOhms), millis());
-    put16(packet + 8, r.raw);
-    put16(packet + 10, r.millivolts);
-    put32(packet + 12, isfinite(r.resistanceOhms) ?
-        static_cast<uint32_t>(lroundf(r.resistanceOhms)) : 0);
-    publish(packet);
-    if (logFlex) {
-      Serial.printf("%u,%u,%u,%.0f\n", i, r.raw, r.millivolts, r.resistanceOhms);
-    }
-  }
-  if (!ENABLE_I2C_SENSORS) return;
+  bool fresh[4] = {};
+  float accel[4][3] = {}, gyro[4][3] = {};
   for (uint8_t i = 0; i < IMU_COUNT; ++i) {
     sensors_event_t a{}, g{}, t{};
     // Verify an ACK before using the library's event conversion.
     bool ok = false;
-    if (imuReady[i]) {
+    if (ENABLE_I2C_SENSORS && imuReady[i]) {
       buses[IMU_BUS[i]]->beginTransmission(IMU_ADDRESS[i]);
       ok = buses[IMU_BUS[i]]->endTransmission() == 0 && imus[i].getEvent(&a, &g, &t);
     }
     ok = ok && isfinite(a.acceleration.x) && isfinite(a.acceleration.y) &&
         isfinite(a.acceleration.z) && isfinite(g.gyro.x) && isfinite(g.gyro.y) && isfinite(g.gyro.z);
+    fresh[i] = ok;
+    if (ok) {
+      accel[i][0] = a.acceleration.x; accel[i][1] = a.acceleration.y; accel[i][2] = a.acceleration.z;
+      gyro[i][0] = g.gyro.x; gyro[i][1] = g.gyro.y; gyro[i][2] = g.gyro.z;
+    }
     header(packet, 2, i, ok, millis());
     if (ok) {
       float values[] = {a.acceleration.x, a.acceleration.y, a.acceleration.z,
@@ -193,4 +190,30 @@ void loop() {
     }
     publish(packet);
   }
+  for (int arm = 0; arm < 2; ++arm) {
+    const bool wasReady = elbows[arm].ready;
+    elbows[arm].update(fresh[2*arm] && fresh[2*arm+1], &accel[2*arm], &gyro[2*arm], millis());
+    if (!wasReady && elbows[arm].ready) Serial.printf("Arm %d IMU fallback calibrated\n", arm);
+    if (wasReady && !elbows[arm].ready) Serial.printf("Arm %d tracking lost; reset with arms straight to recalibrate\n", arm);
+  }
+  for (uint8_t i = 0; i < FLEX_COUNT; ++i) {
+    if (!FLEX_ENABLED[i]) continue;
+    auto r = flex[i].read();
+    const bool fallback = !isfinite(r.resistanceOhms) && elbows[i].ready;
+    header(packet, 1, i, isfinite(r.resistanceOhms) || fallback, millis());
+    if (fallback) {
+      packet[0] = 2; // Older apps reject this rather than interpreting an angle as resistance.
+      packet[3] |= 4; // IMU estimate: bytes 16-17 are centidegrees, NOT ohms.
+      put16(packet + 16, static_cast<uint16_t>(lroundf(elbows[i].angleDegrees * 100)));
+    }
+    put16(packet + 8, r.raw);
+    put16(packet + 10, r.millivolts);
+    put32(packet + 12, isfinite(r.resistanceOhms) ?
+        static_cast<uint32_t>(lroundf(r.resistanceOhms)) : 0);
+    publish(packet);
+    if (logFlex) {
+      Serial.printf("%u,%u,%u,%.0f\n", i, r.raw, r.millivolts, r.resistanceOhms);
+    }
+  }
+
 }

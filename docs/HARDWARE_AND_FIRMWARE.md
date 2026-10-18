@@ -327,3 +327,33 @@ Bluetooth. The updated app displays an ESP32 dummy-mode notice. Existing APKs ca
 receive the updated JavaScript through Metro without a native rebuild. Serial
 Monitor at 115200 prints whether the ESP32 is connected and sending or waiting.
 Set SEND_DUMMY_DATA=false and upload again to restore real sensor acquisition.
+
+## IMU fallback when an elbow flex reading fails
+
+Reset with both arms straight, sensor axes aligned, and hold still for at least
+2 seconds after startup. Serial prints `Arm 0 IMU fallback calibrated` and
+`Arm 1 IMU fallback calibrated`. Stillness detection cannot verify that the arms
+are straight; the wearer must establish this pose. The estimator averages gyro
+bias during calibration, then integrates each IMU orientation as a quaternion.
+The relative rotation magnitude is the displayed angle (0 degrees at calibration).
+Forearm twist contributes to this estimate, and gyro drift accumulates: this is
+not a calibrated anatomical hinge measurement. Reset in the straight pose to
+recalibrate. Any missing IMU read or sampling gap over 100 ms disables that arm's
+fallback until reset, rather than continuing with lost motion.
+
+A valid flex reading always takes priority. If the divider reading is invalid
+and its arm's IMU estimator is ready, firmware sends a 20-byte version-2 flex
+packet: flag bit 2 marks the fallback; bytes 16–17 contain unsigned little-endian
+centidegrees. Raw ADC and mV remain diagnostics, and resistance bytes are zero.
+Updated apps expose `source: imu_fallback`, `angleDegrees`, and
+`resistanceOhms: null`, displaying “IMU estimate” and degrees. Version-1 packets
+remain unchanged; old apps reject version 2 rather than reading fictitious ohms.
+Reload the updated app JavaScript when flashing this firmware. No native APK
+changes are required.
+
+Runs may save the explicitly tagged angle in JSON, but ML still expects flex
+resistance. Live prediction pauses during fallback and resumes after a full
+fresh window of real sensor readings; training excludes fallback samples.
+Restart/redeploy the updated backend validator before saving fallback runs.
+Intermittent contacts that still produce an in-range voltage cannot be detected
+by the existing divider validity check and will not trigger this fallback.
