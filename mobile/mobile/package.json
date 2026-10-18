@@ -1,0 +1,33 @@
+{
+  "name": "posture-check-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "start:device": "expo start --dev-client",
+    "android": "expo run:android",
+    "test": "node --test ../tests/protocol.test.mjs ../tests/sensors.test.mjs ../tests/training.test.mjs ../tests/runs.test.mjs",
+    "start:demo": "expo start --go",
+    "build:android": "npx eas-cli@latest build --platform android --profile development"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "expo": "57",
+    "expo-constants": "~57.0.22",
+    "expo-dev-client": "~57.0.20",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-ble-plx": "3.5.1",
+    "react-native-safe-area-context": "~5.7.0"
+  },
+  "engines": {
+    "node": "^22.13.0 || ^24.3.0 || >=26.0.0"
+  },
+  "devDependencies": {
+    "@expo/ngrok": "^4.1.3",
+    "@types/react": "~19.2.4",
+    "typescript": "~6.0.3"
+  }
+}

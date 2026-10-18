@@ -1,5 +1,6 @@
 const SENSOR_LIMITS = {1: 3, 2: 4, 3: 2};
 const MAX_SAMPLES = 20000;
+const SOURCES = ['dev_testing', 'user_run'];
 
 function isTimestamp(value) {
   return typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -10,8 +11,15 @@ export function validateRunPayload(payload) {
     throw new Error('Run start and end timestamps are required.');
   if (Date.parse(payload.endedAt) < Date.parse(payload.startedAt))
     throw new Error('Run end time cannot be before its start time.');
-  if (!['good', 'bad'].includes(payload.label))
+  if (!SOURCES.includes(payload.source))
+    throw new Error('Run must come from Dev Testing or a Current Run.');
+  // Dev Testing always has a human-picked label. A Current Run has no label
+  // yet — that's filled in later once a trained model can infer it — so null
+  // is the only value allowed there.
+  if (payload.source === 'dev_testing' && !['good', 'bad'].includes(payload.label))
     throw new Error('Choose a good or bad label for the run.');
+  if (payload.source === 'user_run' && payload.label !== null && payload.label !== undefined)
+    throw new Error('A Current Run cannot be saved with a label yet.');
   if (!Array.isArray(payload.samples) || payload.samples.length === 0)
     throw new Error('Cannot save a run without sensor samples.');
   if (payload.samples.length > MAX_SAMPLES)

@@ -1,3 +1,21 @@
+## Screens
+
+- **Home** — app entry point; the big circle starts a Current Run, the tiles below
+  go to Calibrate, Dev Testing, and See past runs.
+- **Current Run** — connect, start/stop a timed run, save it (`source: 'user_run'`,
+  no label yet).
+- **Dev Testing** — connect, pick a Good/Bad label, start/stop, save to train the
+  model (`source: 'dev_testing'`).
+- **Calibrate** — a schematic stick figure driven by the live flex sensors, and a
+  "set current pose as neutral" baseline. The figure is a placeholder for the
+  Blender-exported avatar; see the comment in `screens/CalibrateScreen.js` for the
+  swap-in point.
+- **See past runs** — lists saved runs with per-sensor averages and their
+  good/bad/pending label, from `GET /api/runs`.
+
+All five screens share one connection (`useShirtConnection.js`), so scanning or
+going into demo mode on one screen carries over to the others.
+
 # Android Bluetooth app with EAS
 
 The primary target is an **Android EAS development APK**, with live ESP32 BLE
