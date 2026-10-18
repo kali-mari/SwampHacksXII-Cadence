@@ -73,6 +73,14 @@ of the six sensors to the TCN service. Set `EXPO_PUBLIC_MODEL_API_URL` to the
 reachable HTTPS inference API before starting Expo. Training and service setup are in
 `../MachineLearning/README.md`.
 
+For local data collection from a phone, enter the computer's LAN IPv4 address
+(`http://<computer-ip>:3000`) and the backend collector token on the Dev Testing
+screen, then tap **Test backend**. The phone and computer must share a trusted
+Wi-Fi network, the backend must be running, and Windows Firewall must permit Node.js
+on private networks. HTTP is enabled in this development app build only; rebuild
+and reinstall the Android development APK after changing Android network settings.
+Use HTTPS for a deployed backend.
+
 **Current Run** and **Dev Testing** record valid, non-simulated BLE packets in
 memory. Save a Current Run to upload its samples without a label, or save a Dev
 Testing capture with a manually selected good/bad label for ML training. The

@@ -4,8 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { colors, shared } from '../theme';
 import { Button, BackButton, fmt } from '../components';
 
-const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
-
 const SENSOR_NAMES = {
   '1:0': 'Left elbow', '1:1': 'Right elbow', '1:2': 'Spine',
   '2:0': 'Left upper arm', '2:1': 'Left forearm', '2:2': 'Right upper arm', '2:3': 'Right forearm',
@@ -27,18 +25,18 @@ function labelPill(label) {
 }
 
 export default function PastRunsScreen({ navigate, shirt }) {
-  const { apiUrl, setApiUrl } = shirt;
+  const { apiUrl, collectorApiKey } = shirt;
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     if (!apiUrl.trim()) { setError('Set the cloudbackend API URL to load past runs.'); return; }
-    if (!collectorApiKey) { setError('Set EXPO_PUBLIC_COLLECTOR_API_KEY to load past runs.'); return; }
+    if (!collectorApiKey.trim()) { setError('Enter the collector token on the Dev Testing screen to load past runs.'); return; }
     setLoading(true); setError('');
     try {
       const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
-        headers: { Authorization: `Bearer ${collectorApiKey}` },
+        headers: { Authorization: `Bearer ${collectorApiKey.trim()}` },
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Could not load runs (${response.status}).`);
@@ -48,7 +46,7 @@ export default function PastRunsScreen({ navigate, shirt }) {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, collectorApiKey]);
 
   useEffect(() => { load(); }, [load]);
 

@@ -7,8 +7,35 @@ import { Button, BackButton, ConnectionPanel, DeviceList, SensorCard } from '../
 
 export default function DevTestingScreen({ navigate, shirt }) {
   const [label, setLabel] = useState('good');
-  const { apiUrl, setApiUrl, collecting, sampleCount, runEndedAt, saving,
+  const { apiUrl, setApiUrl, collectorApiKey, setCollectorApiKey, collecting, sampleCount, runEndedAt, saving,
     startRun, finishRun, discardRun, saveRun, error, mode, readings, now } = shirt;
+  const [backendCheck, setBackendCheck] = useState('');
+  const [checkingBackend, setCheckingBackend] = useState(false);
+
+  async function checkBackend() {
+    let baseUrl;
+    try {
+      baseUrl = new URL(apiUrl.trim());
+      if (!['http:', 'https:'].includes(baseUrl.protocol) || baseUrl.pathname !== '/' ||
+          baseUrl.search || baseUrl.hash) throw new Error();
+    } catch {
+      setBackendCheck('Enter a base URL such as http://192.168.1.42:3000.');
+      return;
+    }
+    setCheckingBackend(true);
+    setBackendCheck('');
+    try {
+      const response = await fetch(`${baseUrl.origin}/health`);
+      const result = await response.json();
+      if (!response.ok || result.status !== 'ok')
+        throw new Error(result.error || `Backend returned ${response.status}.`);
+      setBackendCheck('Connected to collector backend and TigerData.');
+    } catch (checkError) {
+      setBackendCheck(`Could not reach backend: ${checkError.message || String(checkError)}`);
+    } finally {
+      setCheckingBackend(false);
+    }
+  }
 
   return <>
     <StatusBar style="dark" />
@@ -22,10 +49,20 @@ export default function DevTestingScreen({ navigate, shirt }) {
       <DeviceList shirt={shirt} />
 
       <View style={[shared.hero, { marginTop: 18 }]}>
-        <Text style={shared.axisLabel}>CLOUDBACKEND API URL</Text>
+        <Text style={shared.axisLabel}>COLLECTOR BACKEND URL</Text>
         <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
-          keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
+          keyboardType="url" placeholder="http://192.168.1.42:3000" placeholderTextColor="#7f9a8c"
           value={apiUrl} onChangeText={setApiUrl} style={shared.input} />
+        <Text style={shared.muted}>For same-Wi-Fi testing, use your computer's IPv4 address, not localhost. Keep the backend running on port 3000.</Text>
+        <Text style={shared.axisLabel}>COLLECTOR TOKEN</Text>
+        <TextInput accessibilityLabel="Collector token" autoCapitalize="none" autoCorrect={false}
+          secureTextEntry value={collectorApiKey} onChangeText={setCollectorApiKey}
+          placeholder="Token from backend COLLECTOR_API_KEY" placeholderTextColor="#7f9a8c" style={shared.input} />
+        <View style={shared.actions}>
+          <Button label={checkingBackend ? 'Checking…' : 'Test backend'} secondary
+            onPress={checkBackend} disabled={checkingBackend} />
+        </View>
+        {!!backendCheck && <Text style={backendCheck.startsWith('Connected') ? shared.muted : shared.notice}>{backendCheck}</Text>}
 
         <View style={shared.actions}>
           <Button label={label === 'good' ? 'Labeling: Good' : 'Labeling: Bad'} secondary

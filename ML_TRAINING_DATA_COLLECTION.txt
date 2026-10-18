@@ -46,12 +46,21 @@ Do not put TigerData credentials in the mobile app.
 
 3. MAKE THE BACKEND REACHABLE FROM THE PHONE
 --------------------------------------------
-The phone cannot use localhost to reach your computer. The Expo development
-link on port 8081 is also not the collector API.
+For local testing, the phone and computer can share a trusted Wi-Fi network.
+Find the computer's IPv4 address with ipconfig and enter
+http://<computer-ip>:3000 in the app's Cloudbackend/Collector Backend URL field.
+Do not use localhost on the phone; that address points to the phone itself.
+Allow Node.js through Windows Firewall on private networks if prompted.
+The active development app build enables cleartext HTTP for local LAN testing;
+it is not a production setting. If the installed APK predates this change, build
+and install the updated Android development APK.
 
-Deploy the collector backend or expose the computer's port 3000 through an
-HTTPS tunnel. Use the resulting phone-reachable HTTPS base URL in the app.
-Do not append /api/runs; the app adds the API route.
+The Expo development link on port 8081 is not the collector API.
+
+For deployment or use outside a trusted local network, deploy the collector
+backend or expose the computer's port 3000 through an HTTPS tunnel. Use the
+resulting phone-reachable HTTPS base URL in the app. Do not append /api/runs; the
+app adds the API route.
 
 
 4. CONFIGURE THE ACTIVE MOBILE APP
@@ -67,6 +76,9 @@ Set:
 
 These are app settings, not TigerData database credentials. Restart Expo after
 editing the file so it loads the updated values.
+Alternatively, enter the backend URL and collector token directly on the app's
+Dev Testing screen; tap Test backend before recording. Values entered on-screen
+are kept in app memory until the app process closes.
 
 EXPO_PUBLIC_MODEL_API_URL is optional for collecting training data. It is used
 by the live TCN assessment service, not by the collector.

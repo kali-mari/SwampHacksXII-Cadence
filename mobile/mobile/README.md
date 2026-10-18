@@ -71,14 +71,22 @@ disconnects in background; scan/connect again on return. Flex readings are resis
 not calibrated joint angles.
 
 The **Developer data capture** page records valid, non-simulated BLE packets in
-memory during a run. Finish the run and choose **Save as good** or **Save as bad**
-to upload its label and samples to TigerData. Demo readings are excluded. Configure
-`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COLLECTOR_API_KEY`, and
-`EXPO_PUBLIC_MODEL_API_URL` in `.env` before starting Expo; the model URL points to
-the TCN inference API over HTTPS. Live classifications appear after a complete,
-fresh 128-frame window is available; the displayed model score is not calibrated
-confidence. Use the collector URL and development token
-configured for cloudbackend. The
+memory during a run. On Dev Testing, enter the collector backend URL and token
+from `COLLECTOR_API_KEY` in the backend's private `.env`, then tap **Test backend**.
+For local phone testing, use the computer's Wi-Fi IPv4 address, for example
+`http://192.168.1.42:3000` (not `localhost` or Expo's port 8081). Keep the backend
+running, connect phone and computer to the same trusted Wi-Fi, and allow Node.js
+through Windows Firewall for private networks. This development app build permits
+plain HTTP for LAN testing; do not use that setting for a production release.
+Changing `android.usesCleartextTraffic` requires rebuilding and reinstalling the
+Android development APK.
+
+Finish a Dev Testing run and choose **Save** with a good/bad label to upload it to
+TigerData. Demo readings are excluded. For deployed use, set the collector URL to
+an HTTPS backend. `EXPO_PUBLIC_MODEL_API_URL` points separately to the TCN
+inference API; it is not needed for data collection. Live classifications appear
+after a complete, fresh 128-frame window is available; the displayed model score
+is not calibrated confidence. The
 TigerData credentials must remain in the backend's environment, never in the mobile
 app. The shared collector token is embedded in the development app, so restrict
 backend access and do not treat it as production authentication. See

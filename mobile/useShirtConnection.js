@@ -4,8 +4,6 @@ import Constants from 'expo-constants';
 import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
 import { buildTcnWindow, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
 
-const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
-
 // Everything that used to live inside the old Dashboard component, minus the
 // "which screen am I" state — App.js owns navigation now, this hook just owns
 // the shirt connection and whatever run is currently being captured. Every
@@ -19,6 +17,7 @@ export function useShirtConnection() {
   const [readings, setReadings] = useState({});
   const [now, setNow] = useState(Date.now());
   const [apiUrl, setApiUrl] = useState(process.env.EXPO_PUBLIC_API_URL || '');
+  const [collectorApiKey, setCollectorApiKey] = useState(process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '');
   const [modelApiUrl, setModelApiUrl] = useState(process.env.EXPO_PUBLIC_MODEL_API_URL || '');
   const [modelInfo, setModelInfo] = useState(null);
   const [assessment, setAssessment] = useState(null);
@@ -192,8 +191,8 @@ export function useShirtConnection() {
       setError('Set EXPO_PUBLIC_API_URL to your deployed cloudbackend API URL before saving.');
       return;
     }
-    if (!collectorApiKey) {
-      setError('Set EXPO_PUBLIC_COLLECTOR_API_KEY for the developer collector before saving.');
+    if (!collectorApiKey.trim()) {
+      setError('Enter the collector token from the backend configuration before saving.');
       return;
     }
     const payload = { startedAt: runStartedAt, endedAt: runEndedAt, source, label, samples: samples.current };
@@ -203,7 +202,7 @@ export function useShirtConnection() {
       setError('');
       const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${collectorApiKey}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${collectorApiKey.trim()}` },
         body: JSON.stringify(payload),
       });
       const result = await response.json().catch(() => ({}));
@@ -270,7 +269,7 @@ export function useShirtConnection() {
   }).length;
 
   return {
-    mode, status, error, devices, readings, now, apiUrl, setApiUrl,
+    mode, status, error, devices, readings, now, apiUrl, setApiUrl, collectorApiKey, setCollectorApiKey,
     modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
     collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
     scan, connect, stop, startDemo, startRun, finishRun, discardRun, saveRun, setError,
