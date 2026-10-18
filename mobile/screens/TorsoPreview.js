@@ -6,7 +6,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Buffer } from 'buffer';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { gravityDeltaQuaternion, elbowBendDegrees, POSE_SENSOR_MAP } from '../pose.mjs';
+import {
+  gravityDeltaQuaternion,
+  elbowBendDegrees,
+  imuElbowDeltaDegrees,
+  POSE_SENSOR_MAP,
+} from '../pose.mjs';
 import { colors } from '../theme';
 
 const MODEL_ASSET = require('../assets/TorsoManquine.glb');
@@ -248,7 +253,7 @@ export default function TorsoPreview({ readings, baseline, now }) {
             const upperRotation = frameTargets[upperKey];
             const forearmBaseline = neutralSensors[imu]?.accelerationMps2;
             const flexReading = currentReadings[flex];
-            const neutralFlex = neutralSensors[flex]?.resistanceOhms;
+            const neutralFlex = neutralSensors[flex];
             let localSwing = new THREE.Quaternion();
 
             if (fresh(forearmReading, currentTime) && forearmBaseline && upperRotation) {
@@ -261,7 +266,15 @@ export default function TorsoPreview({ readings, baseline, now }) {
             }
 
             const bend = fresh(flexReading, currentTime)
-              ? elbowBendDegrees(flexReading.resistanceOhms, neutralFlex)
+              ? flexReading.source === 'imu_fallback'
+                ? imuElbowDeltaDegrees(
+                  flexReading.angleDegrees,
+                  neutralFlex?.angleDegrees,
+                )
+                : elbowBendDegrees(
+                  flexReading.resistanceOhms,
+                  neutralFlex?.resistanceOhms,
+                )
               : null;
             const sign = side === 'left' ? 1 : -1;
             const hinge = bend === null

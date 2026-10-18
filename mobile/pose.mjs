@@ -10,6 +10,7 @@ const MIN_GRAVITY_MPS2 = 6;
 const MAX_GRAVITY_MPS2 = 15;
 const FLEX_FULL_BEND_OHMS = 125000;
 const FLEX_MAX_BEND_DEGREES = 110;
+const DEFAULT_ELBOW_BEND_DEGREES = 90;
 
 export function hasFreshReading(reading, now, maxAge = MAX_READING_AGE_MS) {
   return reading?.valid === true &&
@@ -34,7 +35,11 @@ export function captureNeutralPose(readings, now) {
       const key = `${type}:${id}`;
       const reading = readings[key];
       if (!hasFreshReading(reading, now)) continue;
-      if (type === 1 && Number.isFinite(reading.resistanceOhms)) {
+      if (type === 1 && reading.source === 'imu_fallback' &&
+          Number.isFinite(reading.angleDegrees) &&
+          reading.angleDegrees >= 0 && reading.angleDegrees <= 180) {
+        sensors[key] = { angleDegrees: reading.angleDegrees };
+      } else if (type === 1 && Number.isFinite(reading.resistanceOhms)) {
         sensors[key] = { resistanceOhms: reading.resistanceOhms };
       } else if (type === 2 && usableAcceleration(reading)) {
         sensors[key] = { accelerationMps2: [...reading.accelerationMps2] };
@@ -92,4 +97,15 @@ export function elbowBendDegrees(resistanceOhms, neutralOhms) {
   const span = Math.max(1000, FLEX_FULL_BEND_OHMS - neutralOhms);
   const bend = ((resistanceOhms - neutralOhms) / span) * FLEX_MAX_BEND_DEGREES;
   return Math.max(0, Math.min(FLEX_MAX_BEND_DEGREES, bend));
+}
+
+export function imuElbowDeltaDegrees(angleDegrees, neutralAngleDegrees = DEFAULT_ELBOW_BEND_DEGREES) {
+  if (!Number.isFinite(angleDegrees) || angleDegrees < 0 || angleDegrees > 180 ||
+      !Number.isFinite(neutralAngleDegrees) || neutralAngleDegrees < 0 || neutralAngleDegrees > 180) {
+    return null;
+  }
+  return Math.max(
+    -FLEX_MAX_BEND_DEGREES,
+    Math.min(FLEX_MAX_BEND_DEGREES, angleDegrees - neutralAngleDegrees),
+  );
 }

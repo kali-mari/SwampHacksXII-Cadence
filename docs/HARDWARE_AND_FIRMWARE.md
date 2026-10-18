@@ -375,7 +375,10 @@ and its arm's IMU estimator is ready, firmware sends a 20-byte version-2 flex
 packet: flag bit 2 marks the fallback; bytes 16–17 contain unsigned little-endian
 centidegrees. Raw ADC and mV remain diagnostics, and resistance bytes are zero.
 Updated apps expose `source: imu_fallback`, `angleDegrees`, and
-`resistanceOhms: null`, displaying “IMU estimate” and degrees. Version-1 packets
+`resistanceOhms: null`, display “IMU estimate” and degrees, and drive the 3D
+elbow relative to its captured fallback angle. If app calibration happened while
+the flex sensor was working and no fallback angle was captured, the preview
+anchors the estimate to its 90-degree starting elbow pose. Version-1 packets
 remain unchanged; old apps reject version 2 rather than reading fictitious ohms.
 Reload the updated app JavaScript when flashing this firmware. No native APK
 changes are required.

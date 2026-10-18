@@ -5,6 +5,7 @@ import {
   elbowBendDegrees,
   gravityDeltaQuaternion,
   hasFreshReading,
+  imuElbowDeltaDegrees,
   POSE_SENSOR_MAP,
 } from '../mobile/pose.mjs';
 
@@ -68,4 +69,20 @@ test('elbow flex maps resistance relative to neutral and remains bounded', () =>
   assert.equal(elbowBendDegrees(10000, 25000), 0);
   assert.equal(elbowBendDegrees(150000, 25000), 110);
   assert.equal(elbowBendDegrees(50000, undefined), null);
+});
+
+test('IMU elbow fallback is calibrated relative to the neutral pose and bounded', () => {
+  const readings = {
+    '1:0': {
+      type: 1, id: 0, valid: true, source: 'imu_fallback',
+      receivedAt: now, angleDegrees: 92,
+    },
+  };
+  const baseline = captureNeutralPose(readings, now);
+  assert.equal(baseline.sensors['1:0'].angleDegrees, 92);
+  assert.equal(imuElbowDeltaDegrees(92, baseline.sensors['1:0'].angleDegrees), 0);
+  assert.equal(imuElbowDeltaDegrees(112, baseline.sensors['1:0'].angleDegrees), 20);
+  assert.equal(imuElbowDeltaDegrees(0), -90);
+  assert.equal(imuElbowDeltaDegrees(180), 90);
+  assert.equal(imuElbowDeltaDegrees(181), null);
 });

@@ -96,7 +96,11 @@ the placement diagram. Forearm IMUs provide relative swing; the flex sensors
 provide the elbow hinge angle. Only fresh, valid readings are applied, and stale
 segments ease back to their neutral rig pose. Flex resistance is mapped
 approximately to 0–110 degrees using the captured neutral value and documented
-full-bend resistance; it is not a measured clinical joint angle.
+full-bend resistance; it is not a measured clinical joint angle. When firmware
+sends its version-2 IMU estimate because a flex voltage is invalid, the preview
+uses the estimate relative to the captured neutral angle (or the 90-degree
+starting pose if no fallback angle was present during app calibration). Firmware
+fallback requires both arms straight and still for two seconds after startup.
 
 MPU6050 acceleration gives a gravity direction, not absolute orientation. This
 preview therefore cannot measure yaw, and acceleration while moving can make
