@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: posture-check-collector
+    runtime: node
+    plan: free
+    buildCommand: npm install --prefix cloudbackend
+    startCommand: npm start --prefix cloudbackend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.1
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: 5432
+      - key: DB_NAME
+        value: tsdb
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: COLLECTOR_API_KEY
+        generateValue: true

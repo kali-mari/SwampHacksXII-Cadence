@@ -49,12 +49,25 @@ Historical samples are retained; the TCN trainer ignores unsupported sensor IDs.
 a `sensors` array of per-sensor averages computed in SQL over that run's samples —
 see [`runs.mjs`](./runs.mjs) for the exact shape.
 
-## Configure the mobile collector
+## Deploy the collector to Render
 
-Copy `../mobile/.env.example` to `../mobile/.env`, set `EXPO_PUBLIC_API_URL` to the
-reachable HTTPS API URL and `EXPO_PUBLIC_COLLECTOR_API_KEY` to the same development
-token. Set `EXPO_PUBLIC_MODEL_API_URL` to the reachable HTTPS TCN inference service, then
-restart Expo. The collector page can also be given the collector API URL directly.
-The app buffers a run in memory and uploads it only after you stop recording and
-select **Save as good** or **Save as bad**. Only valid, non-simulated Bluetooth
-readings are included; leaving the app before saving loses the unsaved run.
+The repository includes [`../../render.yaml`](../../render.yaml) for a free
+Render web service. Create a Blueprint from the repository, provide the
+TigerData `DB_HOST`, `DB_USER`, and `DB_PASSWORD`, and let Render generate
+`COLLECTOR_API_KEY`. Keep database credentials and the collector key in Render,
+not Git or the app.
+
+After deployment, set `EXPO_PUBLIC_API_URL` to the service's HTTPS origin and
+`EXPO_PUBLIC_COLLECTOR_API_KEY` to Render's generated key in the Android EAS
+development environment. These are build-time settings; the app has no URL or
+token entry fields. For local Expo development, the same variables may be set
+in `../mobile/.env.example` copied to `../mobile/.env`. Restart Expo after
+changing local values and rebuild the APK after changing EAS values.
+
+The app creates a pending run before capture and uploads valid, non-simulated
+Bluetooth samples in ordered batches while recording. Tapping **Save** (or
+**Save** with a good/bad label in Dev Testing) finalizes the run and attaches its
+label. Pending/interrupted runs stay excluded from training; **Discard** removes
+a pending run. Apply
+[`../../database/0004_streamed_captures.sql`](../../database/0004_streamed_captures.sql)
+in TigerData before deploying this collector.

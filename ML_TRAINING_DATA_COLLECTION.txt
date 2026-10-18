@@ -3,17 +3,14 @@ POSTURE CHECK - ML TRAINING DATA COLLECTION
 
 CURRENT STATUS
 --------------
-The TigerData schema has the current sensor-layout constraint, and the
-collector backend's database health check has succeeded. Restart the local
-backend after setting DB_SSLMODE=require so it uses that configuration.
-
-Phone-to-backend upload is ready only after the backend is reachable from the
-phone over HTTPS and the app has the correct collector URL and token.
+The TigerData schema has the current sensor-layout constraint. The collector
+backend runs locally unless deployed. The Android app can upload only after a
+cloud HTTPS collector and app build configuration are in place.
 
 
 1. START THE COLLECTOR BACKEND
 ------------------------------
-Open PowerShell and run:
+For local troubleshooting only, open PowerShell and run:
 
   cd "C:\Users\kalis\Downloads\SwampHacks 2026\SwampHacksXII-Posture-Check\cloudbackend"
   npm start
@@ -44,29 +41,28 @@ If this fails, check the terminal running npm start for the backend error.
 Do not put TigerData credentials in the mobile app.
 
 
-3. MAKE THE BACKEND REACHABLE FROM THE PHONE
---------------------------------------------
-The phone cannot use localhost to reach your computer. The Expo development
-link on port 8081 is also not the collector API.
+3. DEPLOY THE CLOUD COLLECTOR
+-----------------------------
+First run database/0004_streamed_captures.sql in TigerData's SQL Editor, after
+the earlier schema migrations. Then create a Render Blueprint from this
+repository using render.yaml. Set DB_HOST, DB_USER, and DB_PASSWORD from
+TigerData when Render prompts; keep those secrets in Render only. The Blueprint
+generates COLLECTOR_API_KEY. Render displays the collector's HTTPS onrender.com
+URL after deployment. The free web service may sleep while idle; the first
+health check or upload may take longer.
 
-Deploy the collector backend or expose the computer's port 3000 through an
-HTTPS tunnel. Use the resulting phone-reachable HTTPS base URL in the app.
-Do not append /api/runs; the app adds the API route.
 
-
-4. CONFIGURE THE ACTIVE MOBILE APP
+4. CONFIGURE THE ANDROID APP BUILD
 ----------------------------------
-Create or edit this file:
+Set these variables in the EAS environment used by the development build:
 
-  C:\Users\kalis\Downloads\SwampHacks 2026\SwampHacksXII-Posture-Check\mobile\mobile\.env
+  EXPO_PUBLIC_API_URL=https://<your-render-service>.onrender.com
+  EXPO_PUBLIC_COLLECTOR_API_KEY=<same-value-as-render-COLLECTOR_API_KEY>
 
-Set:
-
-  EXPO_PUBLIC_API_URL=https://<phone-reachable-collector-url>
-  EXPO_PUBLIC_COLLECTOR_API_KEY=<same-value-as-COLLECTOR_API_KEY-in-cloudbackend-env>
-
-These are app settings, not TigerData database credentials. Restart Expo after
-editing the file so it loads the updated values.
+For local Expo development, put those same app variables in mobile/.env and
+restart Expo. The app has no URL/token fields; tap Test backend to check the
+configured cloud service. Never put TigerData credentials in EAS or the mobile
+app. Rebuild and reinstall the Android APK after changing EAS environment values.
 
 EXPO_PUBLIC_MODEL_API_URL is optional for collecting training data. It is used
 by the live TCN assessment service, not by the collector.
@@ -81,7 +77,11 @@ by the live TCN assessment service, not by the collector.
 3. Open Dev Testing, choose the correct posture label, and start a run.
 4. Stop the run and save it with the selected good/bad label.
 
-The app uploads the run when it is saved. Demo/simulated readings are excluded.
+Valid Bluetooth samples upload to TigerData in ordered batches during capture.
+Tap Save after stopping to finalize the run and attach its label; pending or
+interrupted runs are excluded from training. Discard removes a pending run.
+Demo/simulated readings are excluded. Keep the app open until the save
+confirmation appears.
 Current Runs are unlabeled and are not used for supervised training unless
 they are labeled separately.
 
@@ -95,6 +95,7 @@ Run this in TigerData's SQL Editor:
          COUNT(DISTINCT (s.sensor_type, s.sensor_id)) AS sensors
   FROM training_runs AS r
   JOIN training_samples AS s ON s.run_id = r.run_id
+  WHERE r.status = 'complete'
   GROUP BY r.run_id, r.source, r.label, r.started_at
   ORDER BY r.started_at DESC
   LIMIT 10;

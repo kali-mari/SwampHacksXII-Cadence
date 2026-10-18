@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, shared } from '../theme';
+import { collectorBaseUrl } from '../collectorConfig.mjs';
 import { Button, BackButton, fmt } from '../components';
-
-const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
 
 const SENSOR_NAMES = {
   '1:0': 'Left elbow', '1:1': 'Right elbow', '1:2': 'Spine',
@@ -27,18 +26,19 @@ function labelPill(label) {
 }
 
 export default function PastRunsScreen({ navigate, shirt }) {
-  const { apiUrl, setApiUrl } = shirt;
+  const { apiUrl, collectorApiKey } = shirt;
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    if (!apiUrl.trim()) { setError('Set the cloudbackend API URL to load past runs.'); return; }
-    if (!collectorApiKey) { setError('Set EXPO_PUBLIC_COLLECTOR_API_KEY to load past runs.'); return; }
+    const baseUrl = collectorBaseUrl(apiUrl);
+    if (!baseUrl) { setError('Cloud run history is not configured for this app build.'); return; }
+    if (!collectorApiKey.trim()) { setError('Cloud run history is not configured: the collector token is missing from this app build.'); return; }
     setLoading(true); setError('');
     try {
-      const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
-        headers: { Authorization: `Bearer ${collectorApiKey}` },
+      const response = await fetch(`${baseUrl}/api/runs`, {
+        headers: { Authorization: `Bearer ${collectorApiKey.trim()}` },
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Could not load runs (${response.status}).`);
@@ -49,7 +49,7 @@ export default function PastRunsScreen({ navigate, shirt }) {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, collectorApiKey]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -60,11 +60,6 @@ export default function PastRunsScreen({ navigate, shirt }) {
       <Text style={shared.eyebrow}>SEE PAST RUNS</Text>
       <Text style={shared.title}>Past runs</Text>
       <Text style={shared.subtitle}>Average sensor values per run, and whether it looked like good form.</Text>
-
-      <Text style={shared.axisLabel}>CLOUDBACKEND API URL</Text>
-      <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
-        keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
-        value={apiUrl} onChangeText={setApiUrl} style={shared.input} />
 
       <View style={shared.actions}>
         <Button label={loading ? 'Loading…' : 'Refresh'} onPress={load} disabled={loading} />

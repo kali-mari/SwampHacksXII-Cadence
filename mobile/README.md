@@ -73,21 +73,27 @@ of the six sensors to the TCN service. Set `EXPO_PUBLIC_MODEL_API_URL` to the
 reachable HTTPS inference API before starting Expo. Training and service setup are in
 `../MachineLearning/README.md`.
 
-**Current Run** and **Dev Testing** record valid, non-simulated BLE packets in
-memory. Save a Current Run to upload its samples without a label, or save a Dev
-Testing capture with a manually selected good/bad label for ML training. The
-**Past Runs** screen fetches saved sessions and their per-sensor averages from
-the backend. Demo readings are excluded.
+For cloud collection, deploy the collector as described in
+[`../cloudbackend/README.md`](../cloudbackend/README.md). Configure
+`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in the EAS environment
+used for the Android development build, then rebuild and reinstall the APK.
+`EXPO_PUBLIC_API_URL` is the HTTPS collector origin, not the TigerData Console or
+the Expo development-server URL. The Dev Testing screen's **Test backend**
+button checks the configured cloud service; there are no API entry fields in
+the app. For local Expo development, set the same variables in `mobile/.env`
+and restart Expo.
 
-Configure `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in
-`mobile/.env` before starting Expo; the API URL can also be edited from the
-Current Run, Dev Testing, and Past Runs screens. Use the URL and development
-token configured for cloudbackend. TigerData credentials must remain in the
-backend's environment, never in the mobile app. The shared collector token is
-embedded in the development app, so restrict backend access and do not treat it
-as production authentication. See [cloudbackend setup](../cloudbackend/README.md)
-to create the database tables and start/deploy the API. Unsaved in-memory runs
-are lost if the app closes.
+**Current Run** and **Dev Testing** upload valid, non-simulated BLE samples in
+ordered batches while recording. Save finalizes the cloud run; Dev Testing also
+attaches the selected good/bad training label. Pending or interrupted captures
+are excluded from training until finalized, and **Discard** removes a pending
+capture. The **Past Runs** screen lists finalized sessions only. Demo readings
+are excluded.
+
+TigerData credentials stay in the backend's environment, never in the app. The
+collector token is embedded in the development APK, so it is a pilot-only shared
+credential, not production authentication. Keep the app open until the Save
+confirmation appears.
 
 ## Checks
 
