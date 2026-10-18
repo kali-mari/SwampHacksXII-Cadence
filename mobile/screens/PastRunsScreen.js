@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, shared } from '../theme';
 import { Button, BackButton, fmt } from '../components';
@@ -42,7 +42,8 @@ export default function PastRunsScreen({ navigate, shirt }) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Could not load runs (${response.status}).`);
-      setRuns(result.runs || []);
+      if (!Array.isArray(result.runs)) throw new Error('Cloud API returned an invalid past-runs response.');
+      setRuns(result.runs);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -59,6 +60,11 @@ export default function PastRunsScreen({ navigate, shirt }) {
       <Text style={shared.eyebrow}>SEE PAST RUNS</Text>
       <Text style={shared.title}>Past runs</Text>
       <Text style={shared.subtitle}>Average sensor values per run, and whether it looked like good form.</Text>
+
+      <Text style={shared.axisLabel}>CLOUDBACKEND API URL</Text>
+      <TextInput accessibilityLabel="Cloudbackend API URL" autoCapitalize="none" autoCorrect={false}
+        keyboardType="url" placeholder="https://your-api.example.com" placeholderTextColor="#7f9a8c"
+        value={apiUrl} onChangeText={setApiUrl} style={shared.input} />
 
       <View style={shared.actions}>
         <Button label={loading ? 'Loading…' : 'Refresh'} onPress={load} disabled={loading} />
