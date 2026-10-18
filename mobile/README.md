@@ -1,3 +1,21 @@
+## Screens
+
+- **Home** — app entry point; the big circle starts a Current Run, the tiles below
+  go to Calibrate, Dev Testing, and See past runs.
+- **Current Run** — connect, start/stop a timed run, save it (`source: 'user_run'`,
+  no label yet).
+- **Dev Testing** — connect, pick a Good/Bad label, start/stop, save to train the
+  model (`source: 'dev_testing'`).
+- **Calibrate** — a schematic stick figure driven by the live flex sensors, and a
+  "set current pose as neutral" baseline. The figure is a placeholder for the
+  Blender-exported avatar; see the comment in `screens/CalibrateScreen.js` for the
+  swap-in point.
+- **See past runs** — lists saved runs with per-sensor averages and their
+  good/bad/pending label, from `GET /api/runs`.
+
+All five screens share one connection (`useShirtConnection.js`), so scanning or
+going into demo mode on one screen carries over to the others.
+
 # Android Bluetooth app with EAS
 
 The primary target is an **Android EAS development APK**, with live ESP32 BLE
@@ -48,7 +66,28 @@ Displays four IMUs and two elbow flex sensors (left A0, right A1). The
 BLE UUIDs in protocol.mjs must match esp32/config.h. Notifications are decoded from
 base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The app
 disconnects in background; scan/connect again on return. Flex readings are resistance,
-not calibrated joint angles. No trained form scores, database, or recording yet.
+not calibrated joint angles.
+
+During a Current Run, the app can send a rolling 128-frame (2.56-second) window
+of the six sensors to the TCN service. Set `EXPO_PUBLIC_MODEL_API_URL` to the
+reachable HTTPS inference API before starting Expo. Training and service setup are in
+`../MachineLearning/README.md`.
+
+**Current Run** and **Dev Testing** record valid, non-simulated BLE packets in
+memory. Save a Current Run to upload its samples without a label, or save a Dev
+Testing capture with a manually selected good/bad label for ML training. The
+**Past Runs** screen fetches saved sessions and their per-sensor averages from
+the backend. Demo readings are excluded.
+
+Configure `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in
+`mobile/.env` before starting Expo; the API URL can also be edited from the
+Current Run, Dev Testing, and Past Runs screens. Use the URL and development
+token configured for cloudbackend. TigerData credentials must remain in the
+backend's environment, never in the mobile app. The shared collector token is
+embedded in the development app, so restrict backend access and do not treat it
+as production authentication. See [cloudbackend setup](../cloudbackend/README.md)
+to create the database tables and start/deploy the API. Unsaved in-memory runs
+are lost if the app closes.
 
 ## Checks
 

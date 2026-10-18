@@ -45,6 +45,7 @@ void publish(uint8_t* packet) {
   }
 }
 
+// Debug function to ensure bluetooth transmission working
 void updateBleLed() {
   if (!BLE_STATUS_LED_AVAILABLE) return;
   static uint32_t lastToggle = 0;

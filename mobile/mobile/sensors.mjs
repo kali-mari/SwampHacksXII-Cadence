@@ -1,0 +1,25 @@
+export const SENSORS = [
+  {type: 1, id: 0, name: 'Left elbow', group: 'Flex'},
+  {type: 1, id: 1, name: 'Right elbow', group: 'Flex'},
+  {type: 2, id: 0, name: 'Left upper arm', group: 'IMU'},
+  {type: 2, id: 1, name: 'Left forearm', group: 'IMU'},
+  {type: 2, id: 2, name: 'Right upper arm', group: 'IMU'},
+  {type: 2, id: 3, name: 'Right forearm', group: 'IMU'},
+];
+export const sensorKey = ({type, id}) => `${type}:${id}`;
+export function readingStatus(reading, now) {
+  if (!reading) return 'Waiting';
+  if (!reading.valid) return 'Invalid';
+  return now - reading.receivedAt > 1500 ? 'Stale' : 'Live';
+}
+export function demoReadings(t) {
+  return SENSORS.map(s => {
+    const wave = Math.sin(t / 1200 + s.id * .5);
+    const base = {...s, valid: true, deviceMs: t >>> 0};
+    if (s.type === 1) {
+      const resistanceOhms = Math.round(40000 + wave * 15000);
+      return {...base, resistanceOhms, millivolts: Math.round(3300 * 10000 / (10000 + resistanceOhms)), raw: 1000};
+    }
+    if (s.type === 2) return {...base, accelerationMps2: [wave * 2, wave, 9.81], gyroRadps: [wave * .2, wave * .4, .01]};
+  });
+}

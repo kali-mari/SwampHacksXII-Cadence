@@ -18,4 +18,5 @@ export function decodePacket(bytes) {
   if (type === 2) return { ...base,
     accelerationMps2: [8, 10, 12].map(i => v.getInt16(i, true) / 100),
     gyroRadps: [14, 16, 18].map(i => v.getInt16(i, true) / 1000) };
+  throw new Error('Unsupported sensor type');
 }
