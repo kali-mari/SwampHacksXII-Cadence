@@ -60,8 +60,14 @@ export function DeviceList({ shirt }) {
 }
 
 export function SensorCard({ sensor, reading, now }) {
-  const status = reading?.simulated ? 'Demo' : readingStatus(reading, now);
-  const usable = reading?.valid;
+  const baseStatus = reading?.simulated ? 'Simulated' : readingStatus(reading, now);
+  const fallback = reading?.source === 'imu_fallback';
+  const status = fallback && baseStatus === 'Live' ? 'IMU estimate' : baseStatus;
+  const usable = reading?.valid && (fallback
+    ? Number.isFinite(reading.angleDegrees)
+    : sensor.type === 1
+      ? Number.isFinite(reading.resistanceOhms)
+      : true);
   return <View style={shared.card}>
     <View style={shared.row}><Text style={shared.cardTitle}>{sensor.name}</Text>
       <Text style={{ color: status === 'Live' ? colors.good : colors.warn }}>{status}</Text></View>

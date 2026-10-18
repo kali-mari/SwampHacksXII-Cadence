@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import Constants from 'expo-constants';
-import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
+import { SENSORS, sensorKey, readingStatus } from './sensors.mjs';
 import { buildTcnWindow, MAX_RUN_SAMPLES, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
 import { collectorBaseUrl } from './collectorConfig.mjs';
 import { CloudRunUploader } from './cloudCapture.mjs';
@@ -304,9 +304,10 @@ export function useShirtConnection() {
     return !reading?.simulated && readingStatus(reading, now) === 'Live';
   }).length;
   return {
-    mode, status, error, devices, readings, now, apiUrl, setApiUrl,
-    modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
-    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
-    scan, connect, stop, startDemo, startRun, finishRun, discardRun, saveRun, setError,
+    mode, status, error, devices, readings, now, apiUrl, collectorApiKey,
+    modelInfo, assessment, modelError,
+    collecting, startingRun, sampleCount, uploadedSampleCount, runStartedAt, runEndedAt,
+    saving, isExpoGo, liveCount,
+    scan, connect, stop, startRun, finishRun, discardRun, saveRun, setError,
   };
 }
