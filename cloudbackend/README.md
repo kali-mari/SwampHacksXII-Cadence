@@ -30,11 +30,24 @@ developer collector, not a production authentication system: Expo embeds
 deployment-level access controls and do not use this shared token for sensitive
 production data.
 
+Every saved run has a `source`: `dev_testing` for a manually good/bad-labeled Dev
+Testing capture, or `user_run` for an everyday Current Run (saved with `label: null`
+until a trained model can infer it — the run's raw samples stay in `training_samples`
+either way, so that inference step has data to work from). Run
+[`../database/0002_add_run_source.sql`](../database/0002_add_run_source.sql) once,
+after `ml_training.sql`, to add that column to an existing database.
+
+`GET /api/runs` (same bearer token) powers the **See past runs** screen. It returns
+`{runs: [...]}`, newest first, each run's `startedAt`/`endedAt`/`label`/`source` plus
+a `sensors` array of per-sensor averages computed in SQL over that run's samples —
+see [`runs.mjs`](./runs.mjs) for the exact shape.
+
 ## Configure the mobile collector
 
 Copy `../mobile/.env.example` to `../mobile/.env`, set `EXPO_PUBLIC_API_URL` to the
 reachable HTTPS API URL and `EXPO_PUBLIC_COLLECTOR_API_KEY` to the same development
-token, then restart Expo. The collector page can also be given the API URL directly.
-The app buffers a run in memory and uploads it only after you stop recording and
-select **Save as good** or **Save as bad**. Only valid, non-simulated Bluetooth
+token, then restart Expo. The API URL can also be edited from the Current Run,
+Dev Testing, or Past Runs screen. The app buffers a run in memory and uploads
+it after you stop recording and select **Save run** (Current Run) or choose
+**Save** with a good/bad label (Dev Testing). Only valid, non-simulated Bluetooth
 readings are included; leaving the app before saving loses the unsaved run.

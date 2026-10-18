@@ -15,13 +15,26 @@ const samples = [
 const run = overrides => ({
   startedAt,
   endedAt: '2026-10-17T10:00:10.000Z',
+  source: 'dev_testing',
   label: 'good',
   samples,
   ...overrides,
 });
 
-test('accepts valid run labels and decoded flex, IMU, and environment samples', () => {
+test('accepts valid dev_testing runs and decoded flex, IMU, and environment samples', () => {
   assert.doesNotThrow(() => validateRunPayload(run({label: 'bad'})));
+});
+
+test('accepts a user_run with a null label', () => {
+  assert.doesNotThrow(() => validateRunPayload(run({source: 'user_run', label: null})));
+});
+
+test('rejects a user_run that carries a good/bad label', () => {
+  assert.throws(() => validateRunPayload(run({source: 'user_run', label: 'good'})), /cannot be saved with a label/);
+});
+
+test('rejects an unknown source', () => {
+  assert.throws(() => validateRunPayload(run({source: 'something_else'})), /Dev Testing or a Current Run/);
 });
 
 test('rejects empty runs, invalid labels, and reversed timestamps', () => {
