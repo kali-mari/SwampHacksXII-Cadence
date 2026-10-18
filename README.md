@@ -1,4 +1,4 @@
-# SwampHacksXII-Caedence
+# SwampHacksXII-Cadence
 SwampHacks XII 36-hour hackathon project
 
 kawi kawista ethan ander
