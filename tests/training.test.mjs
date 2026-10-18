@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateRunPayload} from '../mobile/training.mjs';
+import {validateRunPayload, validateSamples} from '../mobile/training.mjs';
 
 const startedAt = '2026-10-17T10:00:00.000Z';
 const capturedAt = '2026-10-17T10:00:01.000Z';
@@ -56,4 +56,10 @@ test('rejects simulated, invalid, malformed, or unknown sensor samples', () => {
   assert.throws(() => validateRunPayload(run({samples: [{...samples[2], accelerationMps2: [1, 2, 3, 4], gyroRadps: [0.1, 0.2]}]})), /incomplete/);
   assert.throws(() => validateRunPayload(run({samples: [{...samples[2], id: 4}]})), /unknown sensor/);
   assert.throws(() => validateRunPayload(run({samples: [{...samples[0], type: '1'}]})), /unknown sensor/);
+});
+
+test('validates streamed samples independently of final run labels', () => {
+  assert.doesNotThrow(() => validateSamples([samples[0]]));
+  assert.throws(() => validateSamples([]), /without sensor samples/);
+  assert.throws(() => validateSamples([{...samples[0], simulated: true}]), /non-simulated/);
 });
