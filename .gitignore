@@ -24,4 +24,6 @@ __pycache__/
 
 # Machine Learning model files
 MachineLearning\*.pkl
+MachineLearning\*.pt
+MachineLearning\model_info.json
 run_training_data.csv

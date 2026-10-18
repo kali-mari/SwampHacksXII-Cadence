@@ -5,7 +5,7 @@ credentials in the mobile app or its Expo environment variables.
 
 ## Set up TigerData
 
-Run [`../database/ml_training.sql`](../database/ml_training.sql) once in the
+Run [`../../database/ml_training.sql`](../../database/ml_training.sql) once in the
 TigerData SQL console. It creates a run table with a `good`/`bad` label and a
 JSONB sample table containing each timestamped sensor packet.
 
@@ -13,7 +13,11 @@ JSONB sample table containing each timestamped sensor packet.
 
 Copy `.env.example` to `.env` and fill in the TigerData connection values. Keep
 `.env` private; it is git-ignored. Set `COLLECTOR_API_KEY` to a long random
-development token. Install dependencies and start the API:
+development token. Set `DB_SSLMODE=require` for the Tiger Cloud connection
+format. PostgreSQL traffic remains TLS-encrypted, but this mode does not verify
+the server certificate; use it only on a network you trust. `verify-full` keeps
+certificate verification enabled when the appropriate CA is trusted by Node.
+Install dependencies and start the API:
 
 ```sh
 npm install
@@ -34,8 +38,11 @@ Every saved run has a `source`: `dev_testing` for a manually good/bad-labeled De
 Testing capture, or `user_run` for an everyday Current Run (saved with `label: null`
 until a trained model can infer it — the run's raw samples stay in `training_samples`
 either way, so that inference step has data to work from). Run
-[`../database/0002_add_run_source.sql`](../database/0002_add_run_source.sql) once,
+[`../../database/0002_add_run_source.sql`](../../database/0002_add_run_source.sql) once,
 after `ml_training.sql`, to add that column to an existing database.
+Then apply [`../../database/0003_tcn_sensor_layout.sql`](../../database/0003_tcn_sensor_layout.sql)
+to accept only the two elbow flex sensors and four IMUs for new captures.
+Historical samples are retained; the TCN trainer ignores unsupported sensor IDs.
 
 `GET /api/runs` (same bearer token) powers the **See past runs** screen. It returns
 `{runs: [...]}`, newest first, each run's `startedAt`/`endedAt`/`label`/`source` plus
@@ -46,7 +53,8 @@ see [`runs.mjs`](./runs.mjs) for the exact shape.
 
 Copy `../mobile/.env.example` to `../mobile/.env`, set `EXPO_PUBLIC_API_URL` to the
 reachable HTTPS API URL and `EXPO_PUBLIC_COLLECTOR_API_KEY` to the same development
-token, then restart Expo. The collector page can also be given the API URL directly.
+token. Set `EXPO_PUBLIC_MODEL_API_URL` to the reachable HTTPS TCN inference service, then
+restart Expo. The collector page can also be given the collector API URL directly.
 The app buffers a run in memory and uploads it only after you stop recording and
 select **Save as good** or **Save as bad**. Only valid, non-simulated Bluetooth
 readings are included; leaving the app before saving loses the unsaved run.

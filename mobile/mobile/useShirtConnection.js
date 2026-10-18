@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { SENSORS, sensorKey, readingStatus, demoReadings } from './sensors.mjs';
-import { validateRunPayload } from './training.mjs';
+import { buildTcnWindow, MODEL_FEATURE_NAMES, MODEL_WINDOW_SIZE, validateRunPayload } from './training.mjs';
 
 const collectorApiKey = process.env.EXPO_PUBLIC_COLLECTOR_API_KEY || '';
 
@@ -19,6 +19,10 @@ export function useShirtConnection() {
   const [readings, setReadings] = useState({});
   const [now, setNow] = useState(Date.now());
   const [apiUrl, setApiUrl] = useState(process.env.EXPO_PUBLIC_API_URL || '');
+  const [modelApiUrl, setModelApiUrl] = useState(process.env.EXPO_PUBLIC_MODEL_API_URL || '');
+  const [modelInfo, setModelInfo] = useState(null);
+  const [assessment, setAssessment] = useState(null);
+  const [modelError, setModelError] = useState('');
   const [collecting, setCollecting] = useState(false);
   const [sampleCount, setSampleCount] = useState(0);
   const [runStartedAt, setRunStartedAt] = useState(null);
@@ -26,6 +30,8 @@ export function useShirtConnection() {
   const [saving, setSaving] = useState(false);
   const client = useRef(null), cache = useRef({}), epoch = useRef(0), mounted = useRef(true);
   const captureActive = useRef(false), samples = useRef([]);
+  const modelSamples = useRef([]);
+  const predictionActive = useRef(false), lastPredictionAt = useRef(0);
   const isExpoGo = Constants.executionEnvironment === 'storeClient';
   const reportError = e => { if (mounted.current) { setError(e.message || String(e)); setStatus('Needs attention'); } };
 
@@ -61,6 +67,69 @@ export function useShirtConnection() {
     return () => clearInterval(timer);
   }, [mode]);
 
+  useEffect(() => {
+    setModelInfo(null);
+    setAssessment(null);
+    setModelError(modelApiUrl.trim() ? 'Checking TCN service…' : 'Set the TCN API URL to enable live assessment.');
+    if (!modelApiUrl.trim()) return undefined;
+    let active = true;
+    fetch(`${modelApiUrl.trim().replace(/\/+$/, '')}/model/info`)
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || `TCN service returned ${response.status}.`);
+        if (typeof body?.ready !== 'boolean') throw new Error('TCN service returned invalid model information.');
+        if (body.ready && (body.model_type !== 'temporal_convolutional_network' ||
+            body.window_size !== MODEL_WINDOW_SIZE ||
+            JSON.stringify(body.channel_names) !== JSON.stringify(MODEL_FEATURE_NAMES))) {
+          throw new Error('TCN service data contract does not match this app.');
+        }
+        return body;
+      })
+      .then(info => {
+        if (!active) return;
+        setModelInfo(info);
+        setModelError(info.ready ? '' : info.message || 'The TCN has not been trained yet.');
+      })
+      .catch(error => {
+        if (active) setModelError(`TCN service unavailable: ${error.message || String(error)}`);
+      });
+    return () => { active = false; };
+  }, [modelApiUrl]);
+
+  useEffect(() => {
+    if (!collecting || !modelInfo?.ready || !modelApiUrl.trim()) return undefined;
+    const timer = setInterval(async () => {
+      const requestAt = Date.now();
+      if (predictionActive.current || requestAt - lastPredictionAt.current < 1000) return;
+      const frames = buildTcnWindow(modelSamples.current, requestAt);
+      if (!frames) return;
+      predictionActive.current = true;
+      lastPredictionAt.current = requestAt;
+      try {
+        const response = await fetch(`${modelApiUrl.trim().replace(/\/+$/, '')}/predict`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({frames}),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || `TCN assessment failed (${response.status}).`);
+        if (![0, 1].includes(body?.prediction) || !Number.isFinite(body.confidence) ||
+            typeof body.form_status !== 'string' || typeof body.model_version !== 'string') {
+          throw new Error('TCN service returned an invalid assessment.');
+        }
+        if (mounted.current) {
+          setAssessment({...body, assessedAt: new Date().toISOString()});
+          setModelError('');
+        }
+      } catch (error) {
+        if (mounted.current) setModelError(`Live TCN assessment failed: ${error.message || String(error)}`);
+      } finally {
+        predictionActive.current = false;
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [collecting, modelApiUrl, modelInfo?.ready]);
+
   const reset = () => { cache.current = {}; setReadings({}); setError(''); };
 
   function receiveReading(reading) {
@@ -70,7 +139,12 @@ export function useShirtConnection() {
     if (captureActive.current && reading.valid && !reading.simulated) {
       const sample = { ...stored };
       delete sample.receivedAt;
-      samples.current.push({ ...sample, capturedAt: new Date(receivedAt).toISOString() });
+      const timestamped = {...sample, capturedAt: new Date(receivedAt).toISOString()};
+      samples.current.push(timestamped);
+      modelSamples.current.push(timestamped);
+      modelSamples.current = modelSamples.current.filter(
+        item => receivedAt - Date.parse(item.capturedAt) <= 5000,
+      );
     }
   }
 
@@ -80,9 +154,12 @@ export function useShirtConnection() {
       return;
     }
     samples.current = [];
+    modelSamples.current = [];
     setSampleCount(0);
     setRunStartedAt(new Date().toISOString());
     setRunEndedAt(null);
+    setAssessment(null);
+    lastPredictionAt.current = 0;
     captureActive.current = true;
     setCollecting(true);
     setError('');
@@ -98,9 +175,11 @@ export function useShirtConnection() {
 
   function discardRun() {
     samples.current = [];
+    modelSamples.current = [];
     setSampleCount(0);
     setRunStartedAt(null);
     setRunEndedAt(null);
+    setAssessment(null);
     setError('');
   }
 
@@ -180,10 +259,13 @@ export function useShirtConnection() {
   }
 
   const liveCount = SENSORS.filter(s => readingStatus(readings[sensorKey(s)], now) === 'Live').length;
+  const simulatedCount = SENSORS.filter(s => readings[sensorKey(s)]?.simulated &&
+    readingStatus(readings[sensorKey(s)], now) === 'Live').length;
 
   return {
     mode, status, error, devices, readings, now, apiUrl, setApiUrl,
-    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount,
+    modelApiUrl, setModelApiUrl, modelInfo, assessment, modelError,
+    collecting, sampleCount, runStartedAt, runEndedAt, saving, isExpoGo, liveCount, simulatedCount,
     scan, connect, stop, startDemo, startRun, finishRun, discardRun, saveRun, setError,
   };
 }

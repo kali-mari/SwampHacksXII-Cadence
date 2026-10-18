@@ -7,13 +7,18 @@ import {groupRunRows} from './runs.mjs';
 const {Pool} = pg;
 const port = Number(process.env.PORT || 3000);
 const collectorApiKey = required('COLLECTOR_API_KEY');
+const sslMode = process.env.DB_SSLMODE || 'verify-full';
+if (!['require', 'verify-full'].includes(sslMode))
+  throw new Error('DB_SSLMODE must be either require or verify-full.');
 const pool = new Pool({
   host: required('DB_HOST'),
   port: Number(process.env.DB_PORT || 5432),
   database: required('DB_NAME'),
   user: required('DB_USER'),
   password: required('DB_PASSWORD'),
-  ssl: {rejectUnauthorized: true},
+  // Tiger Cloud connection strings use sslmode=require; TLS stays enabled,
+  // but Node cannot validate Tiger's private self-signed CA by default.
+  ssl: {rejectUnauthorized: sslMode !== 'require'},
   max: 5,
 });
 
@@ -100,8 +105,6 @@ async function listRuns() {
       s.sensor_type, s.sensor_id,
       AVG((s.reading->>'resistanceOhms')::numeric) AS avg_resistance_ohms,
       AVG((s.reading->>'millivolts')::numeric) AS avg_millivolts,
-      AVG((s.reading->>'temperatureC')::numeric) AS avg_temperature_c,
-      AVG((s.reading->>'humidityPct')::numeric) AS avg_humidity_pct,
       AVG((s.reading->'accelerationMps2'->>0)::numeric) AS avg_accel_x,
       AVG((s.reading->'accelerationMps2'->>1)::numeric) AS avg_accel_y,
       AVG((s.reading->'accelerationMps2'->>2)::numeric) AS avg_accel_z,
@@ -110,6 +113,8 @@ async function listRuns() {
       AVG((s.reading->'gyroRadps'->>2)::numeric) AS avg_gyro_z
     FROM training_runs r
     JOIN training_samples s ON s.run_id = r.run_id
+    WHERE (s.sensor_type = 1 AND s.sensor_id BETWEEN 0 AND 1)
+       OR (s.sensor_type = 2 AND s.sensor_id BETWEEN 0 AND 3)
     GROUP BY r.run_id, r.started_at, r.ended_at, r.label, r.source, s.sensor_type, s.sensor_id
     ORDER BY r.started_at DESC
     LIMIT 2000

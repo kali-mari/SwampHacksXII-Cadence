@@ -7,13 +7,18 @@ import {groupRunRows} from './runs.mjs';
 const {Pool} = pg;
 const port = Number(process.env.PORT || 3000);
 const collectorApiKey = required('COLLECTOR_API_KEY');
+const sslMode = process.env.DB_SSLMODE || 'verify-full';
+if (!['require', 'verify-full'].includes(sslMode))
+  throw new Error('DB_SSLMODE must be either require or verify-full.');
 const pool = new Pool({
   host: required('DB_HOST'),
   port: Number(process.env.DB_PORT || 5432),
   database: required('DB_NAME'),
   user: required('DB_USER'),
   password: required('DB_PASSWORD'),
-  ssl: {rejectUnauthorized: true},
+  // Tiger Cloud connection strings use sslmode=require; TLS stays enabled,
+  // but Node cannot validate Tiger's private self-signed CA by default.
+  ssl: {rejectUnauthorized: sslMode !== 'require'},
   max: 5,
 });
 

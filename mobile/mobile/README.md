@@ -63,7 +63,7 @@ error like "cannot be loaded because running scripts is disabled on this system.
 
 ## Data and limitations
 
-Displays four IMUs, three flex sensors (elbows and spine), and two SHT40s. The
+Displays four IMUs and two elbow flex sensors. The
 20-byte packet contract is documented in ../docs/HARDWARE_AND_FIRMWARE.md.
 BLE UUIDs in protocol.mjs must match esp32/config.h. Notifications are decoded from
 base64, cached, and displayed at 5 Hz. Invalid/stale readings are labeled. The app
@@ -73,8 +73,12 @@ not calibrated joint angles.
 The **Developer data capture** page records valid, non-simulated BLE packets in
 memory during a run. Finish the run and choose **Save as good** or **Save as bad**
 to upload its label and samples to TigerData. Demo readings are excluded. Configure
-`EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_COLLECTOR_API_KEY` in `mobile/.env` before
-starting Expo; use the URL and development token configured for cloudbackend. The
+`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COLLECTOR_API_KEY`, and
+`EXPO_PUBLIC_MODEL_API_URL` in `.env` before starting Expo; the model URL points to
+the TCN inference API over HTTPS. Live classifications appear after a complete,
+fresh 128-frame window is available; the displayed model score is not calibrated
+confidence. Use the collector URL and development token
+configured for cloudbackend. The
 TigerData credentials must remain in the backend's environment, never in the mobile
 app. The shared collector token is embedded in the development app, so restrict
 backend access and do not treat it as production authentication. See

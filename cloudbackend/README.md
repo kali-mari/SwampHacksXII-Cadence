@@ -12,8 +12,12 @@ JSONB sample table containing each timestamped sensor packet.
 ## Run locally
 
 Copy `.env.example` to `.env` and fill in the TigerData connection values. Keep
-`.env` private; it is git-ignored. Set `COLLECTOR_API_KEY` to a long random
-development token. Install dependencies and start the API:
+`.env` private; it is git-ignored. Set `DB_SSLMODE=require` for Tiger Cloud's
+connection format. PostgreSQL traffic remains TLS-encrypted, but this mode does
+not verify the server certificate; use it only on a network you trust.
+`verify-full` keeps certificate verification enabled when Node trusts the
+appropriate CA. Set `COLLECTOR_API_KEY` to a long random development token.
+Install dependencies and start the API:
 
 ```sh
 npm install
