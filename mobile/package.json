@@ -8,7 +8,7 @@
     "start:device": "expo start --dev-client",
     "ios": "expo run:ios",
     "android": "expo run:android",
-    "test": "node --test ../tests/protocol.test.mjs ../tests/sensors.test.mjs ../tests/training.test.mjs ../tests/runs.test.mjs",
+    "test": "node --test ../tests/protocol.test.mjs ../tests/sensors.test.mjs ../tests/training.test.mjs ../tests/runs.test.mjs ../tests/collector.test.mjs ../tests/cloudCapture.test.mjs",
     "start:demo": "expo start --go",
     "build:android": "npx eas-cli@latest build --platform android --profile development"
   },

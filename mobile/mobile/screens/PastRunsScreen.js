@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, shared } from '../theme';
+import { collectorBaseUrl } from '../../collectorConfig.mjs';
 import { Button, BackButton, fmt } from '../components';
 
 const SENSOR_NAMES = {
@@ -31,16 +32,18 @@ export default function PastRunsScreen({ navigate, shirt }) {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    if (!apiUrl.trim()) { setError('Set the cloudbackend API URL to load past runs.'); return; }
-    if (!collectorApiKey.trim()) { setError('Enter the collector token on the Dev Testing screen to load past runs.'); return; }
+    const baseUrl = collectorBaseUrl(apiUrl);
+    if (!baseUrl) { setError('Cloud run history is not configured for this app build.'); return; }
+    if (!collectorApiKey.trim()) { setError('Cloud run history is not configured: the collector token is missing from this app build.'); return; }
     setLoading(true); setError('');
     try {
-      const response = await fetch(`${apiUrl.trim().replace(/\/+$/, '')}/api/runs`, {
+      const response = await fetch(`${baseUrl}/api/runs`, {
         headers: { Authorization: `Bearer ${collectorApiKey.trim()}` },
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Could not load runs (${response.status}).`);
-      setRuns(result.runs || []);
+      if (!Array.isArray(result.runs)) throw new Error('Cloud API returned an invalid past-runs response.');
+      setRuns(result.runs);
     } catch (e) {
       setError(e.message || String(e));
     } finally {

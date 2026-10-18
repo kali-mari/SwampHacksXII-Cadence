@@ -8,7 +8,6 @@
     "platforms": ["android"],
     "android": {
       "package": "com.swamphacks.posturecheck",
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
