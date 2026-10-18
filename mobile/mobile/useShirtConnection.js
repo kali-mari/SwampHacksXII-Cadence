@@ -123,7 +123,7 @@ export function useShirtConnection() {
             typeof body.form_status !== 'string' || typeof body.model_version !== 'string') {
           throw new Error('TCN service returned an invalid assessment.');
         }
-        if (mounted.current) {
+        if (mounted.current && buildTcnWindow(modelSamples.current, Date.now())) {
           setAssessment({...body, assessedAt: new Date().toISOString()});
           setModelError('');
         }

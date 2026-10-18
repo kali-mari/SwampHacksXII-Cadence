@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateRunPayload, validateSamples} from '../mobile/training.mjs';
+import {validateRunPayload, buildTcnWindow} from '../mobile/training.mjs';
 
 const startedAt = '2026-10-17T10:00:00.000Z';
 const capturedAt = '2026-10-17T10:00:01.000Z';
@@ -58,8 +58,18 @@ test('rejects simulated, invalid, malformed, or unknown sensor samples', () => {
   assert.throws(() => validateRunPayload(run({samples: [{...samples[0], type: '1'}]})), /unknown sensor/);
 });
 
-test('validates streamed samples independently of final run labels', () => {
-  assert.doesNotThrow(() => validateSamples([samples[0]]));
-  assert.throws(() => validateSamples([]), /without sensor samples/);
-  assert.throws(() => validateSamples([{...samples[0], simulated: true}]), /non-simulated/);
+
+test('fallback angles can be stored but never substituted for model resistance', () => {
+  const fallback = {...samples[0], source: 'imu_fallback', resistanceOhms: null, angleDegrees: 90};
+  assert.doesNotThrow(() => validateRunPayload(run({samples: [fallback]})));
+  assert.throws(() => validateRunPayload(run({samples: [{...fallback, resistanceOhms: 90}]})), /fallback/);
+  const end = Date.parse(capturedAt) + 3000;
+  const history = [];
+  for (let time = end - 3000; time <= end; time += 20) {
+    for (const sample of samples) history.push({...sample, capturedAt: new Date(time).toISOString()});
+  }
+  assert.equal(buildTcnWindow(history, end).length, 128);
+  const substituted = history.map(s => s.type === 1 && s.id === 0
+    ? {...s, source: 'imu_fallback', resistanceOhms: null, angleDegrees: 90} : s);
+  assert.equal(buildTcnWindow(substituted, end), null);
 });

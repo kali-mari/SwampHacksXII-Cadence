@@ -53,3 +53,15 @@ test('marks ESP32 dummy packets while preserving valid readings', () => {
   b[3] = 1;
   assert.equal(decodePacket(b).simulated, false);
 });
+
+test('IMU fallback uses degrees and never supplies fake resistance', () => {
+  const [b, v] = packet(1, 1);
+  b[0] = 2; b[3] = 5;
+  v.setUint16(16, 9012, true);
+  const r = decodePacket(b);
+  assert.equal(r.source, 'imu_fallback');
+  assert.equal(r.angleDegrees, 90.12);
+  assert.equal(r.resistanceOhms, null);
+  v.setUint16(16, 18001, true);
+  assert.throws(() => decodePacket(b), /angle/);
+});
